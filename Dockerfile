@@ -21,6 +21,7 @@ WORKDIR /app
 
 COPY --from=builder /build/server.jar /app/server.jar
 COPY --from=builder /build/resources /app/resources
+COPY --from=builder /build/src /app/src
 COPY --from=builder /build/scripts /app/scripts
 COPY --from=builder /build/sql /app/sql
 COPY --from=builder /build/loadins /app/loadins

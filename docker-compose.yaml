@@ -8,17 +8,8 @@ services:
       MYSQL_DATABASE: swordie232
     volumes:
       - mysql_data:/var/lib/mysql
-      # MySQL auto-runs these files only when /var/lib/mysql is empty.
-      - ./sql/InitTables_characters.sql:/docker-entrypoint-initdb.d/01_InitTables_characters.sql:ro
-      - ./sql/InitTables_cashshop.sql:/docker-entrypoint-initdb.d/02_InitTables_cashshop.sql:ro
-      - ./sql/InitTables_shops.sql:/docker-entrypoint-initdb.d/03_InitTables_shops.sql:ro
-      - ./sql/InitTables_drops.sql:/docker-entrypoint-initdb.d/04_InitTables_drops.sql:ro
-      - ./sql/InitTable_equip_drops.sql:/docker-entrypoint-initdb.d/05_InitTable_equip_drops.sql:ro
-      - ./sql/InitTables_MonsterCollection.sql:/docker-entrypoint-initdb.d/06_InitTables_MonsterCollection.sql:ro
-      - ./sql/InitTable_npc.sql:/docker-entrypoint-initdb.d/07_InitTable_npc.sql:ro
-      - ./sql/InitTables_indexes.sql:/docker-entrypoint-initdb.d/08_InitTables_indexes.sql:ro
-      - ./sql/Init_Admin_accounts.sql:/docker-entrypoint-initdb.d/09_Init_Admin_accounts.sql:ro
-      - ./sql/Init_Migration_at_V79.sql:/docker-entrypoint-initdb.d/10_Init_Migration_at_V79.sql:ro
+      - ./sql:/docker-entrypoint-initdb.d/sql:ro
+      - ./docker/mysql-init/00-init-db.sh:/docker-entrypoint-initdb.d/00-init-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot || exit 1"]
       interval: 10s
