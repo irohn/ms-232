@@ -12,7 +12,7 @@ import java.util.List;
 
 public class RemovedNpcTemplateDao implements SworDao<RemovedNpcTemplate> {
 
-    private static final Logger log = LogManager.getLogger();
+    private static final Logger log = LogManager.getLogger(RemovedNpcTemplateDao.class);
 
     public List<RemovedNpcTemplate> getByMapId(int mapId) {
         var objs = DatabaseManager.executeSelect(this, 

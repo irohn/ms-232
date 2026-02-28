@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserDao implements SworDao<User> {
-    private static final Logger log = LogManager.getLogger();
+    private static final Logger log = LogManager.getLogger(UserDao.class);
     private static final AccountDao accountDao = (AccountDao) SworDaoFactory.getByClass(Account.class);
     private static final FriendDao friendDao = (FriendDao) SworDaoFactory.getByClass(Friend.class);
 

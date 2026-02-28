@@ -12,7 +12,7 @@ import java.util.List;
 
 public class PlacedNpcTemplateDao implements SworDao<PlacedNpcTemplate> {
 
-    private static final Logger log = LogManager.getLogger();
+    private static final Logger log = LogManager.getLogger(PlacedNpcTemplateDao.class);
 
     public List<PlacedNpcTemplate> getByMapId(int mapId) {
         var objs = DatabaseManager.executeSelect(this, 
