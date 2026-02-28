@@ -16,6 +16,7 @@ import java.util.List;
 public class FuncKeyMap {
 
     private static final KeymappingDao keymappingDao = (KeymappingDao) SworDaoFactory.getByClass(Keymapping.class);
+    private static final String DEFAULT_KEYMAP_TYPE_ENV = "DEFAULT_KEYMAP_TYPE";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -104,8 +105,9 @@ public class FuncKeyMap {
         int[] array1;
         int[] array2;
         int[] array3;
+        int effectiveKeySettingType = getEffectiveKeySettingType(keySettingType);
 
-        if (keySettingType == 0) {
+        if (effectiveKeySettingType == 0) {
             array1 = new int[]{1, 2, 3, 4, 5, 6, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 29, 31, 34, 35, 37, 38, 39, 40, 41, 43, 44, 45, 46, 47, 48, 50, 56, 57, 59, 60, 61, 63, 64, 65, 66, 70};
             array2 = new int[]{4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 4, 4, 4, 4, 5, 5, 6, 6, 6, 6, 6, 6, 6, 4};
             array3 = new int[]{46, 10, 12, 13, 18, 23, 8, 5, 0, 4, 27, 30, 39, 1, 41, 19, 14, 15, 52, 2, 17, 11, 3, 20, 26, 16, 22, 9, 50, 51, 6, 31, 29, 7, 53, 54, 100, 101, 102, 103, 104, 105, 106, 47};
@@ -118,5 +120,20 @@ public class FuncKeyMap {
             fkm.putKeyBinding(array1[i], (byte) array2[i], array3[i]);
         }
         return fkm;
+    }
+
+    private static int getEffectiveKeySettingType(int keySettingType) {
+        String configuredType = System.getenv(DEFAULT_KEYMAP_TYPE_ENV);
+        if (configuredType == null || configuredType.isBlank()) {
+            return keySettingType;
+        }
+        try {
+            int parsed = Integer.parseInt(configuredType.trim());
+            if (parsed == 0 || parsed == 1) {
+                return parsed;
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        return keySettingType;
     }
 }

@@ -28,6 +28,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: swordie-server
+    environment:
+      DEFAULT_KEYMAP_TYPE: ${DEFAULT_KEYMAP_TYPE:-0}
     depends_on:
       db:
         condition: service_healthy
