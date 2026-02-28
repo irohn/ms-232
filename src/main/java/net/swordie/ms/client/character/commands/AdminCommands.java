@@ -1070,6 +1070,33 @@ public class AdminCommands {
         }
     }
 
+    @Command(names = {"search", "s"}, requiredType = Admin)
+    public static class SearchItem extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            if (args.length <= 1) {
+                chr.getScriptManager().startScript(0, "admin_item_search", ScriptType.Npc);
+                return;
+            }
+            var includeTerms = new ArrayList<String>();
+            var excludeTerms = new ArrayList<String>();
+            for (int i = 1; i < args.length; i++) {
+                var term = args[i] == null ? "" : args[i].trim();
+                if (term.isEmpty()) {
+                    continue;
+                }
+                if (term.startsWith("!") && term.length() > 1) {
+                    excludeTerms.add(term.substring(1));
+                } else {
+                    includeTerms.add(term);
+                }
+            }
+            var customBindings = new HashMap<String, Object>();
+            customBindings.put("initial_query", String.join(" ", includeTerms));
+            customBindings.put("exclude_queries", excludeTerms);
+            chr.getScriptManager().startScript(0, "admin_item_search", ScriptType.Npc, customBindings);
+        }
+    }
+
     @Command(names = {"giveitem"}, requiredType = GameMaster)
     public static class GiveItem extends AdminCommand {
         public static void execute(Char chr, String[] args) {
