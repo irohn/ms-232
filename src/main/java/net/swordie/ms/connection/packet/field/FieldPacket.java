@@ -759,13 +759,17 @@ public class FieldPacket {
     }
 
     public static OutPacket bonusCubeResult(Char chr, boolean upgrade, int cubeID, int ePos, Equip equip) {
+        return bonusCubeResult(chr, upgrade, cubeID, ePos, chr.getCashInventory().getQuantity(cubeID) - 1, equip);
+    }
+
+    public static OutPacket bonusCubeResult(Char chr, boolean upgrade, int cubeID, int ePos, int remainingCount, Equip equip) {
         OutPacket outPacket = new OutPacket(OutHeader.BONUS_CUBE_RESULT);
 
         outPacket.encodeInt(chr.getId());
         outPacket.encodeByte(upgrade);
         outPacket.encodeInt(cubeID);
         outPacket.encodeInt(ePos);
-        outPacket.encodeInt(chr.getCashInventory().getQuantity(cubeID) - 1); //Do -1 because we consume cube after this UI is shown.
+        outPacket.encodeInt(remainingCount); // Do -1 because we consume cube after this UI is shown.
         equip.encode(outPacket);
 
         return outPacket;

@@ -276,6 +276,46 @@ public class ItemHandlerModule {
         return false;
     }
 
+    protected static boolean handleBonusOccultCube(Client c, InPacket inPacket, Char chr, short pos, int itemId, Item item) {
+        if (c.getWorld().isReboot()) {
+            chr.getOffenseManager().addOffense(String.format("Character %d attempted to use a bonus occult cube in reboot world.", chr.getId()));
+            chr.dispose();
+            return true;
+        }
+        short ePos = (short) inPacket.decodeInt();
+        inPacket.decodeInt(); // reserved
+        InvType invType = ePos < 0 ? EQUIPPED : EQUIP;
+        Equip equip = (Equip) chr.getInventoryByType(invType).getItemBySlot(ePos);
+        if (equip == null) {
+            chr.chatMessage(SystemNotice, "Could not find equip.");
+            return true;
+        } else if (equip.getBonusGrade() < ItemGrade.Rare.getVal()) {
+            chr.getOffenseManager().addOffense(String.format("Character %d tried to use bonus occult cube (id %d) on an equip without rare bonus potential (id %d)", chr.getId(), itemId, equip.getItemId()));
+            chr.dispose();
+            return true;
+        }
+
+        boolean tierUp = equip.applyCube(chr, itemId, true);
+        c.write(FieldPacket.bonusCubeResult(
+                chr,
+                tierUp,
+                itemId,
+                ePos,
+                chr.getConsumeInventory().getQuantity(itemId) - 1,
+                equip
+        ));
+        c.write(FieldPacket.showItemReleaseEffect(chr.getId(), ePos, true));
+        equip.updateToChar(chr);
+        if (JobConstants.isZero(chr.getJob()) && ItemConstants.isLongOrBigSword(equip.getItemId())) {
+            int otherEquipPos = Math.abs(ePos) == 10 ? 11 : 10;
+            Equip otherEquip = (Equip) chr.getEquippedInventory().getItemBySlot(otherEquipPos);
+            otherEquip.copyItemOptionsFrom(equip);
+            otherEquip.updateToChar(chr);
+        }
+        chr.consumeItem(item);
+        return false;
+    }
+
     protected static boolean handleVioletCube(InPacket inPacket, Char chr, int itemId) {
         short ePos;
         InvType invType;

@@ -45,6 +45,7 @@ public class ItemConstants {
     public static final int OCCULT_CUBE = 2711000;
     public static final int MEISTER_CUBE = 2711004;
     public static final int CRAFTSMAN_CUBE = 2711003;
+    public static final int BONUS_OCCULT_CUBE = 2730002;
 
     public static final int BONUS_POT_CUBE = 5062500;
     public static final int SPECIAL_BONUS_POT_CUBE = 5062501;

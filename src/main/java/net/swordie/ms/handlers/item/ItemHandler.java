@@ -210,6 +210,30 @@ public class ItemHandler {
         }
     }
 
+    @Handler(op = InHeader.USER_UNK_CUBE_ITEM_USE_REQUEST)
+    public static void handleUserUnkCubeItemUseRequest(Client c, InPacket inPacket) {
+        Char chr = c.getChr();
+        Inventory consumeInv = chr.getInventoryByType(InvType.CONSUME);
+        inPacket.decodeInt(); // tick
+        short pos = inPacket.decodeShort();
+        int itemId = inPacket.decodeInt();
+        Item item = consumeInv.getItemBySlot(pos);
+        if (item == null || item.getItemId() != itemId) {
+            chr.chatMessage(SystemNotice, "Could not find cube.");
+            chr.dispose();
+            return;
+        }
+        switch (itemId) {
+            case ItemConstants.BONUS_OCCULT_CUBE:
+                ItemHandlerModule.handleBonusOccultCube(c, inPacket, chr, pos, itemId, item);
+                break;
+            default:
+                chr.chatMessage(Mob, String.format("Unhandled cube item %d.", itemId));
+                chr.dispose();
+                break;
+        }
+    }
+
     @Handler(ops = {InHeader.USER_ARCANE_SYMBOL_REQUEST, InHeader.USER_AUTHENTIC_SYMBOL_REQUEST})
     public static void handleUserArcaneSymbolRequest(Char chr, InPacket inPacket) {
         int type = inPacket.decodeInt();
