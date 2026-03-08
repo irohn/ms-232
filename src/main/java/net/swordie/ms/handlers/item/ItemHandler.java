@@ -179,6 +179,10 @@ public class ItemHandler {
                     ItemHandlerModule.handleAddEquipAttributeScroll(inPacket, chr, item, EquipAttribute.ProtectionScroll);
                     break;
                 default:
+                    if (ItemConstants.isReturnScroll(itemId)) {
+                        ItemHandlerModule.handleAddEquipAttributeScroll(inPacket, chr, item, EquipAttribute.ReturnScroll);
+                        break;
+                    }
                     chr.chatMessage(Mob, String.format("Cash item %d is not implemented, notify Sjonnie pls.", itemId));
                     log.debug(String.format("Cash item %d is not implemented, rest packet: %s.", itemId, inPacket));
                     chr.dispose();

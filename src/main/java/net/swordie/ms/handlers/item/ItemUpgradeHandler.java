@@ -283,6 +283,7 @@ public class ItemUpgradeHandler {
             return;
         }
         int scrollID = scroll.getItemId();
+        EquipAttribute equipAttribute = null;
         switch (scrollID) {
             case 2532000: // Safety Scroll
             case 2532001: // Pet Safety Scroll
@@ -290,22 +291,36 @@ public class ItemUpgradeHandler {
             case 2532003: // Safety Scroll
             case 2532004: // Pet Safety Scroll
             case 2532005: // Safety Scroll
-                equip.addAttribute(EquipAttribute.UpgradeCountProtection);
+                equipAttribute = EquipAttribute.UpgradeCountProtection;
                 break;
             case 2530000: // Lucky Day
             case 2530002: // Lucky Day
             case 2530003: // Pet Lucky Day
             case 2530004: // Lucky Day
             case 2530006: // Pet Lucky Day
-                equip.addAttribute(EquipAttribute.LuckyDay);
+                equipAttribute = EquipAttribute.LuckyDay;
                 break;
             case 2531000: // Protection Scroll
             case 2531001:
             case 2531004:
             case 2531005:
-                equip.addAttribute(EquipAttribute.ProtectionScroll);
+                equipAttribute = EquipAttribute.ProtectionScroll;
+                break;
+            default:
+                if (ItemConstants.isReturnScroll(scrollID)) {
+                    equipAttribute = EquipAttribute.ReturnScroll;
+                }
                 break;
         }
+        if (equipAttribute == null) {
+            chr.chatMessage(SystemNotice, "That scroll cannot be applied.");
+            return;
+        }
+        if (equip.hasAttribute(equipAttribute)) {
+            chr.chatMessage(SystemNotice, "That item already has this scroll applied.");
+            return;
+        }
+        equip.addAttribute(equipAttribute);
         c.write(FieldPacket.showItemUpgradeEffect(chr.getId(), true, false, scrollID, equip.getItemId(), false));
 
         if (JobConstants.isZero(chr.getJob()) && ItemConstants.isLongOrBigSword(equip.getItemId())) {
@@ -402,6 +417,8 @@ public class ItemUpgradeHandler {
 
         boolean success = true;
         boolean boom = false;
+        boolean hadReturnScroll = equip.hasAttribute(EquipAttribute.ReturnScroll);
+        Equip prevEquip = hadReturnScroll ? equip.deepCopy() : null;
         Map<ScrollStat, Integer> vals = ii.getScrollStats();
         if (vals.size() > 0) {
             boolean recover = vals.getOrDefault(ScrollStat.recover, 0) != 0;
@@ -486,19 +503,33 @@ public class ItemUpgradeHandler {
             }
             equip.removeAttribute(EquipAttribute.ProtectionScroll);
             equip.removeAttribute(EquipAttribute.LuckyDay);
+            if (hadReturnScroll) {
+                equip.removeAttribute(EquipAttribute.ReturnScroll);
+            }
             if (useTuc) {
                 equip.removeAttribute(EquipAttribute.UpgradeCountProtection);
             }
             c.write(FieldPacket.showItemUpgradeEffect(chr.getId(), success, false, scrollID, equip.getItemId(), boom));
             if (!boom) {
                 equip.recalcEnchantmentStats();
-                equip.updateToChar(chr);
 
+                Equip otherEquip = null;
                 if (JobConstants.isZero(chr.getJob()) && ItemConstants.isLongOrBigSword(equip.getItemId())) {
                     int otherEquipPos = Math.abs(ePos) == 10 ? 11 : 10;
-                    Equip otherEquip = (Equip) chr.getEquippedInventory().getItemBySlot(otherEquipPos);
+                    otherEquip = (Equip) chr.getEquippedInventory().getItemBySlot(otherEquipPos);
                     otherEquip.copySecondaryStatsFrom(equip);
+                }
+
+                if (otherEquip != null && hadReturnScroll) {
+                    otherEquip.removeAttribute(EquipAttribute.ReturnScroll);
+                }
+
+                equip.updateToChar(chr);
+                if (otherEquip != null) {
                     otherEquip.updateToChar(chr);
+                }
+                if (hadReturnScroll) {
+                    ItemHandlerModule.startPostScrollHelperScript(chr, equip, prevEquip, otherEquip);
                 }
             }
             chr.consumeItem(scroll);

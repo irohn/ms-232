@@ -833,7 +833,7 @@ public class ItemConstants {
     }
 
     public static boolean isAssistScroll(int itemId) {
-        return isLuckyDayScroll(itemId) || isProtectionScroll(itemId) || isSafetyScroll(itemId);
+        return isLuckyDayScroll(itemId) || isProtectionScroll(itemId) || isSafetyScroll(itemId) || isReturnScroll(itemId);
     }
 
     public static boolean isLuckyDayScroll(int itemId) {
@@ -850,6 +850,10 @@ public class ItemConstants {
 
     public static boolean isRecoveryScroll(int itemId) {
         return itemId / 1000 == 2533;
+    }
+
+    public static boolean isReturnScroll(int itemId) {
+        return isRecoveryScroll(itemId) || itemId / 100 == 50642 || itemId / 100 == 50644;
     }
 
     /**
@@ -2758,4 +2762,3 @@ public class ItemConstants {
         return drop.isByPickPocket();
     }
 }
-

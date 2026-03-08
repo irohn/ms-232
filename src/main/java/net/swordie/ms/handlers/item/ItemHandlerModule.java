@@ -851,6 +851,18 @@ public class ItemHandlerModule {
         return true;
     }
 
+    public static void startPostScrollHelperScript(Char chr, Equip equip, Equip oldEquip, Equip otherEquip) {
+        var props = new HashMap<String, Object>();
+        props.put("equip", equip);
+        if (oldEquip != null) {
+            props.put("oldEquip", oldEquip);
+        }
+        if (otherEquip != null) {
+            props.put("otherEquip", otherEquip);
+        }
+        chr.getScriptManager().startScript(0, "custom_reapply_helper_scrolls", ScriptType.Npc, props);
+    }
+
     protected static void doEnchantScrollUpgrade(Client c, InPacket inPacket, Char chr) {
         inPacket.decodeInt();// tick
         short pos = inPacket.decodeShort();
@@ -859,6 +871,7 @@ public class ItemHandlerModule {
         pos = (short) Math.abs(pos);
         Equip equip = (Equip) inv.getItemBySlot(pos);
         Equip prevEquip = equip.deepCopy();
+        boolean hadReturnScroll = equip.hasAttribute(EquipAttribute.ReturnScroll);
 
         if (equip == null || equip.hasSpecialAttribute(EquipSpecialAttribute.Vestige)) {
             chr.getOffenseManager().addOffense(String.format("Character %d tried to enchant a non-scrollable equip (pos %d, itemid %d).",
@@ -882,22 +895,29 @@ public class ItemHandlerModule {
         String desc = success ? "Your item has been upgraded." : "Your upgrade has failed.";
         chr.write(FieldPacket.showScrollUpgradeResult(false, success ? 1 : 0, desc, prevEquip, equip));
 
+        Equip otherEquip = null;
         if (JobConstants.isZero(chr.getJob()) && ItemConstants.isLongOrBigSword(equip.getItemId())) {
             int otherEquipPos = Math.abs(pos) == 10 ? 11 : 10;
-            Equip otherEquip = (Equip) chr.getEquippedInventory().getItemBySlot(otherEquipPos);
+            otherEquip = (Equip) chr.getEquippedInventory().getItemBySlot(otherEquipPos);
             otherEquip.copyScrollStatsFrom(equip);
             otherEquip.copyAttributesFrom(equip);
+        }
+
+        if (hadReturnScroll) {
+            equip.removeAttribute(EquipAttribute.ReturnScroll);
+            if (otherEquip != null) {
+                otherEquip.removeAttribute(EquipAttribute.ReturnScroll);
+            }
+        }
+
+        if (otherEquip != null) {
             otherEquip.updateToChar(chr);
         }
 
         equip.updateToChar(chr);
         suis = ItemConstants.getScrollUpgradeInfosByEquip(equip);
         c.write(FieldPacket.scrollUpgradeDisplay(false, suis));
-
-        var props = new HashMap<String, Object>();
-        props.put("equip", equip);
-
-        chr.getScriptManager().startScript(0, "custom_reapply_helper_scrolls", ScriptType.Npc, props);
+        startPostScrollHelperScript(chr, equip, hadReturnScroll ? prevEquip : null, otherEquip);
     }
 
     public static void handleBeastTamerSpReset(Char chr, InPacket inPacket, Item item) {
@@ -1131,6 +1151,10 @@ public class ItemHandlerModule {
         Equip equip = (Equip) chr.getInventoryByType(invType).getItemBySlot(equipPos);
         if (scroll == null || equip == null) {
             chr.chatMessage(SystemNotice, "Could not find scroll or equip.");
+            return;
+        }
+        if (equip.hasAttribute(equipAttribute)) {
+            chr.chatMessage(SystemNotice, "That item already has this scroll applied.");
             return;
         }
 
