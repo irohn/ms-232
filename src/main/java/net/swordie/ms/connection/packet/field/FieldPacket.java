@@ -788,6 +788,19 @@ public class FieldPacket {
         return outPacket;
     }
 
+    public static OutPacket inGameBonusCubeResult(Char chr, boolean upgrade, int cubeID, int ePos, Equip equip) {
+        OutPacket outPacket = new OutPacket(OutHeader.IN_GAME_BONUS_CUBE_RESULT);
+
+        outPacket.encodeInt(chr.getId());
+        outPacket.encodeByte(upgrade);
+        outPacket.encodeInt(cubeID);
+        outPacket.encodeInt(ePos);
+        outPacket.encodeInt(chr.getConsumeInventory().getQuantity(cubeID) - 1); // Do -1 because we consume cube after this UI is shown.
+        equip.encode(outPacket);
+
+        return outPacket;
+    }
+
     public static OutPacket sitResult(int chrId, int fieldSeatId) {
         OutPacket outPacket = new OutPacket(OutHeader.SIT_RESULT);
 

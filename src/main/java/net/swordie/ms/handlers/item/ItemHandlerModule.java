@@ -282,8 +282,15 @@ public class ItemHandlerModule {
             chr.dispose();
             return true;
         }
-        short ePos = (short) inPacket.decodeInt();
-        inPacket.decodeInt(); // reserved
+        short ePos;
+        if (inPacket.getUnreadAmount() >= 4) {
+            ePos = (short) inPacket.decodeInt();
+        } else {
+            ePos = inPacket.decodeShort();
+        }
+        if (inPacket.getUnreadAmount() >= 4) {
+            inPacket.decodeInt(); // reserved
+        }
         InvType invType = ePos < 0 ? EQUIPPED : EQUIP;
         Equip equip = (Equip) chr.getInventoryByType(invType).getItemBySlot(ePos);
         if (equip == null) {
@@ -296,14 +303,7 @@ public class ItemHandlerModule {
         }
 
         boolean tierUp = equip.applyCube(chr, itemId, true);
-        c.write(FieldPacket.bonusCubeResult(
-                chr,
-                tierUp,
-                itemId,
-                ePos,
-                chr.getConsumeInventory().getQuantity(itemId) - 1,
-                equip
-        ));
+        c.write(FieldPacket.inGameBonusCubeResult(chr, tierUp, itemId, ePos, equip));
         c.write(FieldPacket.showItemReleaseEffect(chr.getId(), ePos, true));
         equip.updateToChar(chr);
         if (JobConstants.isZero(chr.getJob()) && ItemConstants.isLongOrBigSword(equip.getItemId())) {
