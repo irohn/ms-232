@@ -2347,6 +2347,14 @@ public class AdminCommands {
         }
     }
 
+    @Command(names = {"pets"}, requiredType = Admin)
+    public static class Pets extends AdminCommand {
+
+        public static void execute(Char chr, String[] args) {
+            chr.getScriptManager().openShop(1012004);
+        }
+    }
+
     // lie detector
     @Command(names = {"ld", "liedetector"}, requiredType = GameMaster)
     public static class LD extends AdminCommand {

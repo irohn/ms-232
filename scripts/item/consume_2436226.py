@@ -1,13 +1,13 @@
 # Maple Admin's Heartfelt Gift
-# Get All Box
+# 2x 3x EXP Coupon
 from net.swordie.ms.enums import InvType
 
 box = 2436226
-item_ids = [1102170, 1142073, 1072535] # Welcome Cape, Be My Friend, Beach Sandal
+item_id = 2450163
+quantity = 2
 
-if sm.hasItem(box) and sm.getEmptyInventorySlots(InvType.EQUIP) >= len(item_ids):
+if sm.hasItem(box) and sm.getEmptyInventorySlots(InvType.CONSUME) >= 1:
     sm.consumeItem(box)
-    for item_id in item_ids:
-        sm.giveItem(item_id)
+    sm.giveItem(item_id, quantity)
     sm.setSpeakerID(9201238)
-    sm.sendSayOkay("Got" + "".join("\r\n#i{0}# #z{0}#".format(item_id) for item_id in item_ids))
+    sm.sendSayOkay("Got\r\n#i{0}# #z{0}# x{1}".format(item_id, quantity))
