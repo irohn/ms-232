@@ -5,6 +5,7 @@ import net.swordie.ms.client.character.Char;
 import net.swordie.ms.client.character.info.HitInfo;
 import net.swordie.ms.client.character.skills.Option;
 import net.swordie.ms.client.character.skills.Skill;
+import net.swordie.ms.client.character.skills.SkillStat;
 import net.swordie.ms.client.character.skills.info.AttackInfo;
 import net.swordie.ms.client.character.skills.info.SkillInfo;
 import net.swordie.ms.client.character.skills.info.SkillUseInfo;
@@ -26,6 +27,11 @@ public class ItemSkillHandler implements ICommonSkillHandler {
 
 
     // Item Skill
+    public static final int DAWN_SHIELD = 80011247;
+    public static final int DAWN_SHIELD_BUFF = 80011248;
+    public static final int DIVINE_GUARDIAN = 80011249;
+    public static final int DIVINE_SHIELD = 80011250;
+    public static final int DIVINE_BRILLIANCE = 80011251;
     public static final int MONOLITH = 80011261;
     public static final int ELEMENTAL_SYLPH = 80001518;
     public static final int FLAME_SYLPH = 80001519;
@@ -83,6 +89,15 @@ public class ItemSkillHandler implements ICommonSkillHandler {
         Field field = chr.getField();
 
         switch (skillId) {
+            case DAWN_SHIELD:
+            case DAWN_SHIELD_BUFF:
+                applyDawnShield(tsm, slv);
+                break;
+            case DIVINE_GUARDIAN:
+            case DIVINE_SHIELD:
+            case DIVINE_BRILLIANCE:
+                applyGenericItemStatBuff(tsm, skillId, slv);
+                break;
             case MONOLITH:
                 summon = Summon.getSummonByNoCTS(chr, skillId, slv);
                 field = chr.getField();
@@ -152,7 +167,12 @@ public class ItemSkillHandler implements ICommonSkillHandler {
 
     @Override
     public void handleRemoveCTS(CharacterTemporaryStat cts, Option o) {
-
+        if (cts == CharacterTemporaryStat.ProtectiveShield && o != null && o.rOption == DAWN_SHIELD_BUFF) {
+            if (chr.hasSkill(DIVINE_GUARDIAN)) {
+                applyGenericItemStatBuff(chr.getTemporaryStatManager(), DIVINE_GUARDIAN, chr.getSkillLevel(DIVINE_GUARDIAN));
+                chr.getTemporaryStatManager().sendSetStatPacket();
+            }
+        }
     }
 
     @Override
@@ -163,5 +183,73 @@ public class ItemSkillHandler implements ICommonSkillHandler {
     @Override
     public void handleChangeMP(int curMP, int newMP) {
 
+    }
+
+    private void applyDawnShield(TemporaryStatManager tsm, int slv) {
+        SkillInfo si = SkillData.getSkillInfoById(DAWN_SHIELD_BUFF);
+        if (si == null) {
+            return;
+        }
+
+        int tOpt = getPositiveSkillValue(si, slv, SkillStat.time);
+        if (tOpt <= 0) {
+            tOpt = 30;
+        }
+
+        int pdd = getPositiveSkillValue(si, slv, SkillStat.indiePdd, SkillStat.pdd, SkillStat.pddX);
+        if (pdd <= 0) {
+            pdd = 500;
+        }
+        tsm.putCharacterStatValue(CharacterTemporaryStat.IndieDEF, new Option(pdd, DAWN_SHIELD_BUFF, tOpt));
+
+        int stance = getPositiveSkillValue(si, slv, SkillStat.indieStance, SkillStat.stanceProp);
+        if (stance <= 0) {
+            stance = 100;
+        }
+        tsm.putCharacterStatValue(CharacterTemporaryStat.IndieStance, new Option(stance, DAWN_SHIELD_BUFF, tOpt));
+
+        int shieldAmount = getPositiveSkillValue(si, slv, SkillStat.damAbsorbShieldR, SkillStat.x, SkillStat.y);
+        if (shieldAmount > 0 && shieldAmount <= 100) {
+            shieldAmount = chr.getHPPerc(shieldAmount);
+        }
+        if (shieldAmount <= 0) {
+            shieldAmount = chr.getHPPerc(20);
+        }
+        tsm.putCharacterStatValue(CharacterTemporaryStat.ProtectiveShield, new Option(shieldAmount, DAWN_SHIELD_BUFF, tOpt));
+    }
+
+    private void applyGenericItemStatBuff(TemporaryStatManager tsm, int skillId, int slv) {
+        SkillInfo si = SkillData.getSkillInfoById(skillId);
+        if (si == null) {
+            return;
+        }
+        int tOpt = getPositiveSkillValue(si, slv, SkillStat.time);
+        if (tOpt <= 0) {
+            tOpt = 10;
+        }
+
+        putIfPositive(tsm, CharacterTemporaryStat.IndiePAD, skillId, tOpt, getPositiveSkillValue(si, slv, SkillStat.indiePad, SkillStat.pad));
+        putIfPositive(tsm, CharacterTemporaryStat.IndieMAD, skillId, tOpt, getPositiveSkillValue(si, slv, SkillStat.indieMad, SkillStat.mad));
+        putIfPositive(tsm, CharacterTemporaryStat.IndieDEF, skillId, tOpt, getPositiveSkillValue(si, slv, SkillStat.indiePdd, SkillStat.pdd, SkillStat.pddX));
+        putIfPositive(tsm, CharacterTemporaryStat.IndieStance, skillId, tOpt, getPositiveSkillValue(si, slv, SkillStat.indieStance, SkillStat.stanceProp));
+        putIfPositive(tsm, CharacterTemporaryStat.IndieDamR, skillId, tOpt, getPositiveSkillValue(si, slv, SkillStat.indieDamR, SkillStat.damR));
+        putIfPositive(tsm, CharacterTemporaryStat.IndieIgnoreMobpdpR, skillId, tOpt, getPositiveSkillValue(si, slv, SkillStat.indieIgnoreMobpdpR));
+        putIfPositive(tsm, CharacterTemporaryStat.IndieCr, skillId, tOpt, getPositiveSkillValue(si, slv, SkillStat.indieCr, SkillStat.cr));
+    }
+
+    private void putIfPositive(TemporaryStatManager tsm, CharacterTemporaryStat cts, int skillId, int tOpt, int value) {
+        if (value > 0) {
+            tsm.putCharacterStatValue(cts, new Option(value, skillId, tOpt));
+        }
+    }
+
+    private int getPositiveSkillValue(SkillInfo si, int slv, SkillStat... stats) {
+        for (SkillStat stat : stats) {
+            int value = si.getValue(stat, slv);
+            if (value > 0) {
+                return value;
+            }
+        }
+        return 0;
     }
 }
