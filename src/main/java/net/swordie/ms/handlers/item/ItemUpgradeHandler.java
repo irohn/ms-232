@@ -125,11 +125,20 @@ public class ItemUpgradeHandler {
             case 2615031:
             case 2615053:
             case 2616061:
+            case 2048817:
+            case 2048829:
                 equip.addStat(iPAD, rollWeightedStat(5, 6, 7));
                 return;
             case 2615032:
             case 2616062:
+            case 2048819:
                 equip.addStat(iMAD, rollWeightedStat(5, 6, 7));
+                return;
+            case 2047409:
+                equip.addStat(iPAD, rollTwoWeightedStat(4, 5, 50));
+                return;
+            case 2047410:
+                equip.addStat(iMAD, rollTwoWeightedStat(4, 5, 50));
                 return;
             case 2047405:
             case 2047407:

@@ -150,7 +150,6 @@ public class NpcData {
         NpcShopDlg nsd = new NpcShopDlg();
         nsd.setNpcTemplateID(id);
         nsd.setShopID(id);
-        items.sort(Comparator.comparingInt(NpcShopItem::getItemID));
         nsd.setItems(items);
         addShop(id, nsd);
 

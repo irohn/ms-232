@@ -61,6 +61,8 @@ import net.swordie.ms.world.field.*;
 import net.swordie.ms.world.field.fieldeffect.FieldEffect;
 import net.swordie.ms.world.field.fieldevents.timedfieldevents.elitechampions.*;
 import net.swordie.ms.world.field.obstacleatom.ObstacleAtomInfo;
+import net.swordie.ms.world.shop.NpcShopDlg;
+import net.swordie.ms.world.shop.NpcShopItem;
 import net.swordie.ms.life.npc.PlacedNpcTemplate;
 import net.swordie.ms.life.npc.RemovedNpcTemplate;
 import net.swordie.orm.dao.AccountDao;
@@ -95,6 +97,79 @@ public class AdminCommands {
     private static final UserDao userDao = (UserDao) SworDaoFactory.getByClass(User.class);
     private static final PlacedNpcTemplateDao placedNpcTemplateDao = (PlacedNpcTemplateDao) SworDaoFactory.getByClass(PlacedNpcTemplate.class);
     private static final RemovedNpcTemplateDao removedNpcTemplateDao = (RemovedNpcTemplateDao) SworDaoFactory.getByClass(RemovedNpcTemplate.class);
+    private static final int DEFAULT_RUNTIME_SHOP_NPC_ID = 1011100;
+    private static final int PETS_SHOP_ID = 1012004;
+    private static final int[] GM_SHOP_ITEMS = {
+            1202186, 1202236, 1202248, 1202249, 1202250, 1202251,
+            1113073, 1113074, 1113075, 1113055, 1113155, 1113269, 1113313, 1113305, 1113306,
+            2633926,
+            1122430, 1122267, 1122296, 1122150,
+            2633914,
+            1132246, 1132308,
+            2434586, 1004075, 2633915,
+            1012632,
+            1022278,
+            2434584,
+            2434585,
+            2633913,
+            1032223, 1032316,
+            1152155, 1152154,
+            2633927,
+            1182273, 1182060,
+            1142666, 1143008, 1142586,
+            2630594, 1099015, 1092088, 1092089, 1092113,
+            1672069, 1672082, 1672076,
+            1662072, 1662073
+    };
+    private static final int[] SCROLL_SHOP_ITEMS = {
+            2000005, 2450163, 2022179, 2022282, 2022273,
+            2615026, 2616057, 2613042, 2612043, 2616061, 2616062, 2613050, 2613051,
+            2615031, 2615032, 2612061, 2612062, 2047409, 2047410,
+            2470007, 2049047, 2049740, 2049784, 2049506, 2048331, 2049624, 4001832,
+            2049371, 2049376, 2644007,
+            2590009, 2591123, 2591595
+    };
+    private static NpcShopItem createMesoShopItem(int shopId, int itemId) {
+        NpcShopItem nsi = new NpcShopItem();
+        nsi.setShopID(shopId);
+        nsi.setItemID(itemId);
+        nsi.setPrice(1);
+        nsi.setQuantity((short) 1);
+        nsi.setTabIndex(0);
+        return nsi;
+    }
+
+    private static void openRuntimeShop(Char chr, int npcTemplateId, int... itemIds) {
+        NpcShopDlg nsd = new NpcShopDlg();
+        nsd.setShopID(npcTemplateId);
+        nsd.setSelectNpcItemID(npcTemplateId);
+        nsd.setNpcTemplateID(npcTemplateId);
+        nsd.setShopVerNo(1);
+        for (int itemId : itemIds) {
+            nsd.addItem(createMesoShopItem(npcTemplateId, itemId));
+        }
+        chr.setShop(nsd);
+        chr.write(ShopDlg.openShop(chr, 0, nsd));
+    }
+
+    private static void openExtendedShop(Char chr, int baseShopId, int... extraItemIds) {
+        NpcShopDlg baseShop = NpcData.getShopById(baseShopId);
+        if (baseShop == null) {
+            chr.chatMessage(String.format("Could not find shop with id %d.", baseShopId));
+            return;
+        }
+        NpcShopDlg nsd = new NpcShopDlg();
+        nsd.setShopID(baseShop.getShopID());
+        nsd.setSelectNpcItemID(baseShop.getSelectNpcItemID());
+        nsd.setNpcTemplateID(baseShop.getNpcTemplateID());
+        nsd.setShopVerNo(baseShop.getShopVerNo());
+        nsd.setItems(new ArrayList<>(baseShop.getItems()));
+        for (int itemId : extraItemIds) {
+            nsd.addItem(createMesoShopItem(baseShopId, itemId));
+        }
+        chr.setShop(nsd);
+        chr.write(ShopDlg.openShop(chr, 0, nsd));
+    }
 
     @Command(names = {"test"}, requiredType = Admin)
     public static class Test extends AdminCommand {
@@ -2351,7 +2426,31 @@ public class AdminCommands {
     public static class Pets extends AdminCommand {
 
         public static void execute(Char chr, String[] args) {
-            chr.getScriptManager().openShop(1012004);
+            chr.getScriptManager().openShop(PETS_SHOP_ID);
+        }
+    }
+
+    @Command(names = {"gmshop", "equips"}, requiredType = Admin)
+    public static class GMShop extends AdminCommand {
+
+        public static void execute(Char chr, String[] args) {
+            openRuntimeShop(chr, DEFAULT_RUNTIME_SHOP_NPC_ID, GM_SHOP_ITEMS);
+        }
+    }
+
+    @Command(names = {"scrolls", "enhance"}, requiredType = Admin)
+    public static class Scrolls extends AdminCommand {
+
+        public static void execute(Char chr, String[] args) {
+            openRuntimeShop(chr, DEFAULT_RUNTIME_SHOP_NPC_ID, SCROLL_SHOP_ITEMS);
+        }
+    }
+
+    @Command(names = {"cubes"}, requiredType = Admin)
+    public static class Cubes extends AdminCommand {
+
+        public static void execute(Char chr, String[] args) {
+            chr.getScriptManager().startScript(0, "admin_cubes", ScriptType.Npc);
         }
     }
 

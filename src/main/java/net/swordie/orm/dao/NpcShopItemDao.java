@@ -164,7 +164,7 @@ public class NpcShopItemDao implements SworDao<NpcShopItem> {
     }
 
     public List<NpcShopItem> byShopId(int id) {
-        var objs = DatabaseManager.executeSelect(this, "SELECT * FROM shopitems si WHERE shopid = ?", "si", id);
+        var objs = DatabaseManager.executeSelect(this, "SELECT * FROM shopitems si WHERE shopid = ? ORDER BY si.id", "si", id);
         List<NpcShopItem> saveDatas = new ArrayList<>();
         for (var obj : objs) {
             if (obj != null) {
