@@ -101,6 +101,9 @@ public class DecentSkillHandler implements ICommonSkillHandler {
         tsm.putCharacterStatValue(IndieMAD, new Option(20, skillId, 240));
         tsm.putCharacterStatValue(IndieMHP, new Option(475, skillId, 240));
         tsm.putCharacterStatValue(IndieMMP, new Option(475, skillId, 240));
+        if (chr.isAdminInvincible()) {
+            tsm.putCharacterStatValue(IndiePMdR, new Option(999_999_999, skillId, 240), true);
+        }
     }
 
     private void giveDecentCombatOrders(int skillId) {

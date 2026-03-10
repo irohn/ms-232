@@ -2115,6 +2115,14 @@ public class Equip extends Item {
                 }
             }
         }
+        for (int line : getOptionBonus()) {
+            if (ItemConstants.isDecentSkillItemOption(line)) {
+                int skillID = SkillConstants.getDecentSkillByItemOption(line, jobId);
+                if (skillID != 0) {
+                    decentSkills.add(skillID);
+                }
+            }
+        }
         for (int socket : getSockets()) {
             if (ItemConstants.isDecentSkillSocketOption(socket)) {
                 int skillID = SkillConstants.getDecentSkillBySocketOption(socket, jobId);

@@ -178,6 +178,17 @@ public class AdminCommands {
         return (Equip) chr.getInventoryByType(invType).getItemBySlot((short) slot);
     }
 
+    private static Equip getAdminEquipBySlot(Char chr, String slotArg) {
+        if (slotArg == null || slotArg.isEmpty()) {
+            return null;
+        }
+        if (slotArg.length() > 1 && (slotArg.charAt(0) == 'c' || slotArg.charAt(0) == 'C')) {
+            short slot = Short.parseShort(slotArg.substring(1));
+            return (Equip) chr.getInventoryByType(InvType.DEC).getItemBySlot(slot);
+        }
+        return getAdminEquipBySlot(chr, Integer.parseInt(slotArg));
+    }
+
     private static void startAdminSelectionScript(Char chr, Object session) {
         Map<String, Object> props = new HashMap<>();
         props.put("session", session);
@@ -936,8 +947,7 @@ public class AdminCommands {
                 chr.chatMessage("Usage: !setpot <inv position> <id 1st line> <id 2nd line> <id 3rd line>");
                 return;
             }
-            int invPosition = Integer.parseInt(args[1]);
-            Equip equip = (Equip) chr.getInventoryByType(InvType.EQUIP).getItemBySlot(invPosition);
+            Equip equip = getAdminEquipBySlot(chr, args[1]);
             if (equip == null) {
                 chr.chatMessage("There is no equip on this position.");
                 return;
@@ -958,8 +968,7 @@ public class AdminCommands {
                 chr.chatMessage("Usage: !setbpot <inv position> <id 1st line> <id 2nd line> <id 3rd line>");
                 return;
             }
-            int invPosition = Integer.parseInt(args[1]);
-            Equip equip = (Equip) chr.getInventoryByType(InvType.EQUIP).getItemBySlot(invPosition);
+            Equip equip = getAdminEquipBySlot(chr, args[1]);
             if (equip == null) {
                 chr.chatMessage("There is no equip on this position.");
                 return;
