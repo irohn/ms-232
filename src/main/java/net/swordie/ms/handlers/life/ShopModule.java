@@ -27,6 +27,8 @@ import org.apache.logging.log4j.Logger;
 public class ShopModule {
 
     private static final Logger log = LogManager.getLogger(ShopModule.class);
+    private static final int DEFAULT_RUNTIME_SHOP_NPC_ID = 1011100;
+    private static final int GM_SHOP_POTENTIAL_MEDAL = 1142573;
 
     public static void handleShopSell(Char chr, InPacket inPacket, NpcShopDlg nsd) {
         var slot = inPacket.decodeShort();
@@ -192,12 +194,34 @@ public class ShopModule {
             var itemInfo = ItemData.getItemInfoByID(itemId);
             item.setQuantity(itemInfo.getSlotMax());
         }
+        applyRuntimeShopCustomizations(chr, nsd, item);
         chr.addItemToInventory(item);
 
         if (nsi.isBuyBack()) {
             chr.write(ShopDlg.shopResult(ShopResult.update(chr, nsd)));
         } else {
             chr.write(ShopDlg.shopResult(ShopResult.buy(0, 0, -1, 0)));
+        }
+    }
+
+    private static void applyRuntimeShopCustomizations(Char chr, NpcShopDlg nsd, Item item) {
+        if (!(item instanceof Equip equip) || nsd == null) {
+            return;
+        }
+        if (nsd.getShopID() != DEFAULT_RUNTIME_SHOP_NPC_ID) {
+            return;
+        }
+        if (equip.getItemId() == GM_SHOP_POTENTIAL_MEDAL) {
+            equip.setOptionBase(0, 41005);
+            equip.setOptionBase(1, 41006);
+            equip.setOptionBase(2, 31003);
+            equip.setOptionBonus(0, 41007);
+            equip.setOptionBonus(1, 31001);
+            equip.setOptionBonus(2, 31004);
+        } else if (ItemConstants.isArcaneSymbol(equip.getItemId())) {
+            equip.initSymbolStats(ItemConstants.MAX_ARCANE_SYMBOL_LEVEL, 0, chr.getJob());
+        } else if (ItemConstants.isAuthenticForceSymbol(equip.getItemId())) {
+            equip.initSymbolStats(ItemConstants.MAX_AUTH_SYMBOL_LEVEL, 0, chr.getJob());
         }
     }
 }
