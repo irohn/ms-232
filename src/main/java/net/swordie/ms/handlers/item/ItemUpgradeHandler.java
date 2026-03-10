@@ -103,9 +103,17 @@ public class ItemUpgradeHandler {
         return scrollID == 2644017;
     }
 
-    private static int rollChaosStat(int scrollID, boolean noNegative, EquipBaseStat ebs) {
+    private static int rollChaosStat(int scrollID, boolean noNegative, EquipBaseStat ebs, boolean maximize) {
         int amount;
-        if (isMiraculousChaosScroll(scrollID)) {
+        if (maximize) {
+            if (isMiraculousChaosScroll(scrollID)) {
+                amount = 7;
+            } else if (isIncredibleChaosOfGoodnessScroll(scrollID)) {
+                amount = 6;
+            } else {
+                amount = ItemConstants.RAND_CHAOS_MAX;
+            }
+        } else if (isMiraculousChaosScroll(scrollID)) {
             amount = rollWeightedValue(MIRACULOUS_CHAOS_VALUES, MIRACULOUS_CHAOS_WEIGHTS);
         } else if (isIncredibleChaosOfGoodnessScroll(scrollID)) {
             amount = rollWeightedValue(INCREDIBLE_COG_VALUES, INCREDIBLE_COG_WEIGHTS);
@@ -694,7 +702,7 @@ public class ItemUpgradeHandler {
                                     continue;
                                 }
                                 hasChaosTarget = true;
-                                int randStat = rollChaosStat(scrollID, noNegative, ebs);
+                                int randStat = rollChaosStat(scrollID, noNegative, ebs, chr.isAdminInvincible());
                                 chaosRolls.put(ebs, randStat);
                                 if (randStat != 0) {
                                     hasNonZeroChange = true;
