@@ -948,6 +948,16 @@ public class ItemHandlerModule {
         chr.getScriptManager().startScript(0, "custom_reapply_helper_scrolls", ScriptType.Npc, props);
     }
 
+    public static void startBlackFlameHelperScript(Char chr, Equip equip, Equip oldEquip, Equip otherEquip) {
+        var props = new HashMap<String, Object>();
+        props.put("equip", equip);
+        props.put("oldEquip", oldEquip);
+        if (otherEquip != null) {
+            props.put("otherEquip", otherEquip);
+        }
+        chr.getScriptManager().startScript(0, "custom_black_flame", ScriptType.Npc, props);
+    }
+
     protected static void doEnchantScrollUpgrade(Client c, InPacket inPacket, Char chr) {
         inPacket.decodeInt();// tick
         short pos = inPacket.decodeShort();

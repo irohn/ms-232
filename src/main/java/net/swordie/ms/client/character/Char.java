@@ -295,6 +295,7 @@ public class Char {
     private ScheduledFuture lieDetectorTimer;
     private int deathCount = -1;
     private MemorialCubeInfo memorialCubeInfo;
+    private PendingFlameInfo pendingFlameInfo;
     private boolean skillCDBypass = false;
     // TODO Move this to CharacterStat?
     private Map<BaseStat, Long> baseStats = new HashMap<>();
@@ -3830,6 +3831,14 @@ public class Char {
                 //getMemorialCubeInfo().applyOldEquip(this);
                 getMemorialCubeInfo().applyPotential(true);
             }
+            if (getPendingFlameInfo() != null) {
+                getPendingFlameInfo().revert();
+                getPendingFlameInfo().getEquip().updateToChar(this);
+                if (getPendingFlameInfo().getOtherEquip() != null) {
+                    getPendingFlameInfo().getOtherEquip().updateToChar(this);
+                }
+                setPendingFlameInfo(null);
+            }
             if (field != null && FieldConstants.isUnionRaidField(field.getId()) && getUnionRaid() != null) {
                 getUnionRaid().updateTotalDamageDone(this, true);
                 getUnionRaid().playerLeave();
@@ -5002,6 +5011,14 @@ public class Char {
 
     public void setMemorialCubeInfo(MemorialCubeInfo memorialCubeInfo) {
         this.memorialCubeInfo = memorialCubeInfo;
+    }
+
+    public PendingFlameInfo getPendingFlameInfo() {
+        return pendingFlameInfo;
+    }
+
+    public void setPendingFlameInfo(PendingFlameInfo pendingFlameInfo) {
+        this.pendingFlameInfo = pendingFlameInfo;
     }
 
     public FamiliarCodexManager getFamiliarCodexManager() {

@@ -186,17 +186,28 @@ public class ItemUpgradeHandler {
     }
 
 
-    @Handler(ops = {
-            InHeader.USER_EX_ITEM_UPGRADE_ITEM_USE_REQUEST,
-            InHeader.USER_KARMA_CONSUME_ITEM_USE_REQUEST
-    })
+    @Handler(op = InHeader.USER_EX_ITEM_UPGRADE_ITEM_USE_REQUEST)
     public static void handleUserExItemUpgradeItemUseRequest(Client c, InPacket inPacket) {
+        handleRebirthFlameUse(c, inPacket, false);
+    }
+
+    @Handler(op = InHeader.USER_KARMA_CONSUME_ITEM_USE_REQUEST)
+    public static void handleUserKarmaConsumeItemUseRequest(Client c, InPacket inPacket) {
+        handleRebirthFlameUse(c, inPacket, true);
+    }
+
+    private static void handleRebirthFlameUse(Client c, InPacket inPacket, boolean blackFlame) {
         inPacket.decodeInt(); //tick
         var usePosition = inPacket.decodeShort();
         var eqpPosition = inPacket.decodeShort();
         var enchantSkill = inPacket.decodeByte() != 0;
 
         Char chr = c.getChr();
+        if (chr.getPendingFlameInfo() != null) {
+            chr.chatMessage(SystemNotice, "Finish your current black flame choice first.");
+            chr.dispose();
+            return;
+        }
         Item flame = chr.getInventoryByType(InvType.CONSUME).getItemBySlot(usePosition);
         var invType = eqpPosition < 0 ? EQUIPPED : EQUIP;
         Equip equip = (Equip) chr.getInventoryByType(invType).getItemBySlot(eqpPosition);
@@ -224,6 +235,8 @@ public class ItemUpgradeHandler {
             }
 
             boolean success = Util.succeedProp(vals.getOrDefault(ScrollStat.success, 100));
+            Equip oldEquip = blackFlame && success ? equip.deepCopy() : null;
+            Equip otherEquip = null;
 
             if (success) {
                 boolean eternalFlame = vals.getOrDefault(ScrollStat.createType, 6) >= 7;
@@ -231,9 +244,11 @@ public class ItemUpgradeHandler {
 
                 if (JobConstants.isZero(chr.getJob()) && ItemConstants.isLongOrBigSword(equip.getItemId())) {
                     int otherEquipPos = Math.abs(eqpPosition) == 10 ? 11 : 10;
-                    Equip otherEquip = (Equip) chr.getEquippedInventory().getItemBySlot(otherEquipPos);
-                    otherEquip.copyFlameStatsFrom(equip);
-                    otherEquip.updateToChar(chr);
+                    otherEquip = (Equip) chr.getEquippedInventory().getItemBySlot(otherEquipPos);
+                    if (otherEquip != null) {
+                        otherEquip.copyFlameStatsFrom(equip);
+                        otherEquip.updateToChar(chr);
+                    }
 
                     chr.write(ZeroPool.egoEquipComplete(true, true));
                 }
@@ -242,6 +257,11 @@ public class ItemUpgradeHandler {
             c.write(FieldPacket.showItemUpgradeEffect(chr.getId(), success, false, flame.getItemId(), equip.getItemId(), false));
             equip.updateToChar(chr);
             chr.consumeItem(flame);
+            if (blackFlame && success) {
+                chr.setPendingFlameInfo(new PendingFlameInfo(equip, oldEquip, otherEquip));
+                ItemHandlerModule.startBlackFlameHelperScript(chr, equip, oldEquip, otherEquip);
+                return;
+            }
             chr.write(WvsContext.rebirthFlameResult(flame.getItemId(), equip.getBagIndexWithEquipped(), 0));
         }
 
