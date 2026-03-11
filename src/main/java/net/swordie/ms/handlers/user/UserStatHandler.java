@@ -6,6 +6,7 @@ import net.swordie.ms.client.character.ExtendSP;
 import net.swordie.ms.client.character.hyperstats.HyperStatsModule;
 import net.swordie.ms.client.character.skills.Skill;
 import net.swordie.ms.client.character.skills.info.SkillInfo;
+import net.swordie.ms.client.character.skills.temp.TemporaryStatManager;
 import net.swordie.ms.connection.InPacket;
 import net.swordie.ms.connection.packet.UserLocal;
 import net.swordie.ms.connection.packet.WvsContext;
@@ -426,18 +427,12 @@ public class UserStatHandler {
     public static void handleUserInBossReviveRequest(Char chr, InPacket inPacket) {
         // byte unk = inPacket.decodeByte();
 
-        // buff freezer logic
-        var buffProtector = chr.getBuffProtectorItem();
-        if (buffProtector != null) {
-            chr.setBuffProtector(true);
-            chr.consumeItem(buffProtector);
-            if (chr.getTemporaryStatManager().hasStat(CapDebuff)) {
-                chr.getTemporaryStatManager().removeStat(CapDebuff);
-            }
-            chr.write(UserLocal.setBuffProtector(buffProtector.getItemId(), true));
-        } else {
-            chr.getTemporaryStatManager().removeAllStats();
+        TemporaryStatManager tsm = chr.getTemporaryStatManager();
+        chr.setBuffProtector(true);
+        if (tsm.hasStat(CapDebuff)) {
+            tsm.removeStat(CapDebuff);
         }
+        chr.heal(chr.getMaxHP(), false, true);
 
         int deathcount = chr.getDeathCount();
         if (deathcount > 0) {
@@ -456,16 +451,15 @@ public class UserStatHandler {
                     chr.warp(toField);
                 }
                 chr.setTransferField(0);
-                return;
             } else {
                 chr.warp(chr.getOrCreateFieldByCurrentInstanceType(chr.getField().getInfo().getForcedReturn()));
             }
         }
-        chr.heal(chr.getMaxHP(), false, true);
         chr.setBuffProtector(false);
         chr.setNextAvailableConsumeItemTime(0);
         if (chr.getJobHandler() != null) {
             chr.getJobHandler().handleRevive();
         }
+        tsm.resendCurrentStats();
     }
 }

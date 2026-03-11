@@ -8,6 +8,7 @@ import net.swordie.ms.client.character.Char;
 import net.swordie.ms.client.character.HyperTPRock;
 import net.swordie.ms.client.character.damage.DamageSkinType;
 import net.swordie.ms.client.character.modules.LinkSkillsModule;
+import net.swordie.ms.client.character.skills.temp.TemporaryStatManager;
 import net.swordie.ms.client.character.skills.TownPortal;
 import net.swordie.ms.client.friend.result.FriendResult;
 import net.swordie.ms.client.party.Party;
@@ -263,19 +264,13 @@ public class MigrationHandler {
             byte tarfield = inPacket.decodeByte(); // ?
             byte reviveType = inPacket.decodeByte();
             int returnMap = fieldInfo.getReturnMap();
+            TemporaryStatManager tsm = chr.getTemporaryStatManager();
             switch (reviveType) {
                 // so far only got 0?
             }
 
-            // buff freezer logic
-            var buffProtector = chr.getBuffProtectorItem();
-            if (buffProtector != null) {
-                chr.setBuffProtector(true);
-                chr.consumeItem(buffProtector);
-                chr.write(UserLocal.setBuffProtector(buffProtector.getItemId(), true));
-            } else {
-                chr.getTemporaryStatManager().removeAllStats();
-            }
+            chr.setBuffProtector(true);
+            chr.heal(chr.getMaxHP(), false, true);
 
             int deathcount = chr.getDeathCount();
             if (deathcount > 0) {
@@ -296,7 +291,6 @@ public class MigrationHandler {
                         chr.warp(toField);
                     }
                     chr.setTransferField(0);
-                    return;
                 } else {
                     returnMap = fieldInfo.getForcedReturn();
                     if (returnMap >= 999999999) {
@@ -306,11 +300,11 @@ public class MigrationHandler {
                     chr.warp(targetFieldInstance != null ? targetFieldInstance : chr.getField());
                 }
             }
-            chr.heal(chr.getMaxHP(), false, true);
             chr.setBuffProtector(false);
             if (chr.getJobHandler() != null) {
                 chr.getJobHandler().handleRevive();
             }
+            tsm.resendCurrentStats();
         } else if (chr.getTransferField() == targetField && chr.getTransferFieldReq() == chr.getField().getId()) {
             Field toField = chr.getOrCreateFieldByCurrentInstanceType(chr.getTransferField());
             if (toField != null && chr.getTransferField() > 0) {

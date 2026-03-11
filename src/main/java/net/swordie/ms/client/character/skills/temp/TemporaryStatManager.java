@@ -1507,6 +1507,16 @@ public class TemporaryStatManager {
         }
     }
 
+    public void resendCurrentStats() {
+        synchronized (statLock) {
+            if (getCurrentStats().isEmpty()) {
+                return;
+            }
+            getCurrentStats().forEach((cts, options) -> getNewStats().put(cts, new ArrayList<>(options)));
+        }
+        sendSetStatPacket();
+    }
+
     public void sendResetStatPacket() {
         sendResetStatPacket(false);
     }

@@ -608,18 +608,8 @@ public class ItemHandler {
     @Handler(op = InHeader.USER_PROTECT_BUFF_DIE_ITEM_REQUEST)
     public static void handleUserProtectBuffDieItemRequest(Char chr, InPacket inPacket) {
         inPacket.decodeInt(); // tick
-        boolean used = inPacket.decodeByte() != 0;
-        if (used) {
-            // grabs the first one from the list of buffItems
-            Item buffProtector = chr.getBuffProtectorItem();
-            if (buffProtector != null) {
-                chr.setBuffProtector(true);
-                chr.consumeItem(buffProtector);
-                chr.write(UserLocal.setBuffProtector(buffProtector.getItemId(), true));
-            } else {
-                chr.getOffenseManager().addOffense(String.format("Character id %d tried to use a buff without having the appropriate item.", chr.getId()));
-            }
-        }
+        inPacket.decodeByte(); // used
+        chr.setBuffProtector(false);
     }
 
     @Handler(op = InHeader.USER_DEFAULT_WING_ITEM)

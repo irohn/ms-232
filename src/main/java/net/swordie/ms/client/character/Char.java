@@ -2196,7 +2196,7 @@ public class Char {
                 heal(getMaxHP(), false, true);
             } else{
                 //Show revive UI
-                write(UserLocal.openUIOnDead(true, getBuffProtectorItem() != null,
+                write(UserLocal.openUIOnDead(true, false,
                         false, false, false, getDeathCount() > 0 ? ReviveType.BOSS : ReviveType.NORMAL));
             }
         }
@@ -5290,7 +5290,7 @@ public class Char {
     public void die() {
         setStatAndSendPacket(Stat.hp, 0);
 
-        write(UserLocal.openUIOnDead(true, getBuffProtectorItem() != null,
+        write(UserLocal.openUIOnDead(true, false,
                 false, false, false, getDeathCount() > 0 ? ReviveType.BOSS : ReviveType.NORMAL));
 
         // Special Node Activation
