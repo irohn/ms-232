@@ -233,6 +233,20 @@ public class PlayerCommands {
         }
     }
 
+    @Command(names = {"pets"}, requiredType = AccountType.Player)
+    public static class PetsCommand extends PlayerCommand {
+        public static void execute(Char chr, String[] args) {
+            AdminCommands.openPetShop(chr);
+        }
+    }
+
+    @Command(names = {"enhance"}, requiredType = AccountType.Player)
+    public static class EnhanceCommand extends PlayerCommand {
+        public static void execute(Char chr, String[] args) {
+            AdminCommands.openEnhanceShop(chr);
+        }
+    }
+
     @Command(names = {"help", "info"}, requiredType = AccountType.Player)
     public static class HelpPlayerCommands extends PlayerCommand {
         public static void execute(Char chr, String[] args) {
@@ -244,6 +258,8 @@ public class PlayerCommands {
             chr.chatMessage("@lifeinfo/@li: Shows info about all lifes in the current map (pets, mobs, npcs, etc...).");
             chr.chatMessage("@qm/@quickmove/@boat: Opens the boat npc from the quick move menu.");
             chr.chatMessage("@sell/@sale: Opens the Inventory Utility npc.");
+            chr.chatMessage("@pets: Opens the pet shop.");
+            chr.chatMessage("@enhance: Opens the enhancement consumables shop.");
             chr.chatMessage("@inspect: Opens an npc where you can see others' equipped items and their stats.");
             chr.chatMessage("@players/checkmap: Shows you who are currently in your map.");
         }

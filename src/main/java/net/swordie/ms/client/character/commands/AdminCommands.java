@@ -149,13 +149,38 @@ public class AdminCommands {
             2049371, 2049376, 2644007, 2048767, 2048717, 2048716,
             2590009, 2591123, 2591595
     };
+    private static final int[][] ENHANCE_SHOP_ITEMS = {
+            {2615026, 1_000_000_000}, {2616057, 1_000_000_000}, {2613042, 1_000_000_000}, {2612043, 1_000_000_000},
+            {2616061, 2_000_000_000}, {2616062, 2_000_000_000}, {2613050, 2_000_000_000}, {2613051, 2_000_000_000},
+            {2615031, 2_000_000_000}, {2615032, 2_000_000_000}, {2612061, 2_000_000_000}, {2612062, 2_000_000_000},
+            {2047409, 800_000_000}, {2047410, 800_000_000},
+            {2470007, 25_000_000}, {2049047, 25_000_000}, {2049624, 25_000_000},
+            {2049740, 800_000_000},
+            {2049784, 2_000_000_000},
+            {2049506, 10_000_000}, {2048304, 10_000_000},
+            {2048331, 100_000_000},
+            {4001832, 5_000},
+            {2049371, 800_000_000},
+            {2049376, 2_000_000_000},
+            {2048717, 25_000_000},
+            {2048716, 9_500_000},
+            {5062009, 300_000_000},
+            {5062010, 500_000_000},
+            {5062500, 650_000_000},
+            {2711004, 250_000_000},
+            {2711003, 150_000_000}
+    };
     private static final Pattern NON_ALNUM = Pattern.compile("[^a-z0-9]+");
 
     private static NpcShopItem createMesoShopItem(int shopId, int itemId) {
+        return createMesoShopItem(shopId, itemId, 1);
+    }
+
+    private static NpcShopItem createMesoShopItem(int shopId, int itemId, int price) {
         NpcShopItem nsi = new NpcShopItem();
         nsi.setShopID(shopId);
         nsi.setItemID(itemId);
-        nsi.setPrice(1);
+        nsi.setPrice(price);
         nsi.setQuantity((short) 1);
         nsi.setTabIndex(0);
         return nsi;
@@ -169,6 +194,19 @@ public class AdminCommands {
         nsd.setShopVerNo(1);
         for (int itemId : itemIds) {
             nsd.addItem(createMesoShopItem(npcTemplateId, itemId));
+        }
+        chr.setShop(nsd);
+        chr.write(ShopDlg.openShop(chr, 0, nsd));
+    }
+
+    private static void openRuntimeShop(Char chr, int npcTemplateId, int[][] itemPrices) {
+        NpcShopDlg nsd = new NpcShopDlg();
+        nsd.setShopID(npcTemplateId);
+        nsd.setSelectNpcItemID(npcTemplateId);
+        nsd.setNpcTemplateID(npcTemplateId);
+        nsd.setShopVerNo(1);
+        for (int[] itemPrice : itemPrices) {
+            nsd.addItem(createMesoShopItem(npcTemplateId, itemPrice[0], itemPrice[1]));
         }
         chr.setShop(nsd);
         chr.write(ShopDlg.openShop(chr, 0, nsd));
@@ -191,6 +229,14 @@ public class AdminCommands {
         }
         chr.setShop(nsd);
         chr.write(ShopDlg.openShop(chr, 0, nsd));
+    }
+
+    public static void openPetShop(Char chr) {
+        chr.getScriptManager().openShop(PETS_SHOP_ID);
+    }
+
+    public static void openEnhanceShop(Char chr) {
+        openRuntimeShop(chr, DEFAULT_RUNTIME_SHOP_NPC_ID, ENHANCE_SHOP_ITEMS);
     }
 
     private static Equip getAdminEquipBySlot(Char chr, int slot) {
@@ -2640,11 +2686,11 @@ public class AdminCommands {
         }
     }
 
-    @Command(names = {"pets"}, requiredType = Admin)
+    @Command(names = {"pets"}, requiredType = Player)
     public static class Pets extends AdminCommand {
 
         public static void execute(Char chr, String[] args) {
-            chr.getScriptManager().openShop(PETS_SHOP_ID);
+            openPetShop(chr);
         }
     }
 
@@ -2656,11 +2702,19 @@ public class AdminCommands {
         }
     }
 
-    @Command(names = {"scrolls", "enhance"}, requiredType = Admin)
+    @Command(names = {"scrolls"}, requiredType = Admin)
     public static class Scrolls extends AdminCommand {
 
         public static void execute(Char chr, String[] args) {
             openRuntimeShop(chr, DEFAULT_RUNTIME_SHOP_NPC_ID, SCROLL_SHOP_ITEMS);
+        }
+    }
+
+    @Command(names = {"enhance"}, requiredType = Player)
+    public static class EnhanceShop extends AdminCommand {
+
+        public static void execute(Char chr, String[] args) {
+            openEnhanceShop(chr);
         }
     }
 
