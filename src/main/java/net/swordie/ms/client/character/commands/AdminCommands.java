@@ -17,6 +17,7 @@ import net.swordie.ms.client.character.runestones.RuneStone;
 import net.swordie.ms.client.character.skills.Option;
 import net.swordie.ms.client.character.skills.Skill;
 import net.swordie.ms.client.character.skills.StolenSkill;
+import net.swordie.ms.client.character.skills.vmatrix.MatrixRecord;
 import net.swordie.ms.client.character.skills.atom.forceatom.ForceAtom;
 import net.swordie.ms.client.character.skills.info.ForceAtomInfo;
 import net.swordie.ms.client.character.skills.info.SkillInfo;
@@ -53,6 +54,7 @@ import net.swordie.ms.life.mob.MobTemporaryStat;
 import net.swordie.ms.life.mob.skill.MobSkillID;
 import net.swordie.ms.life.npc.Npc;
 import net.swordie.ms.loaders.*;
+import net.swordie.ms.loaders.containerclasses.VCoreInfo;
 import net.swordie.ms.loaders.containerclasses.SkillStringInfo;
 import net.swordie.ms.scripts.ScriptManagerImpl;
 import net.swordie.ms.scripts.ScriptType;
@@ -82,6 +84,8 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static net.swordie.ms.client.character.skills.temp.CharacterTemporaryStat.*;
 import static net.swordie.ms.enums.AccountType.*;
@@ -101,6 +105,18 @@ public class AdminCommands {
     private static final RemovedNpcTemplateDao removedNpcTemplateDao = (RemovedNpcTemplateDao) SworDaoFactory.getByClass(RemovedNpcTemplate.class);
     private static final int DEFAULT_RUNTIME_SHOP_NPC_ID = 1011100;
     private static final int PETS_SHOP_ID = 1012004;
+    private static final int[] SYMBOL_UNLOCK_QUESTS = {
+            34120, // Vanishing Journey symbol
+            34216, // Chu Chu symbol
+            34330, // Lachelein symbol
+            34478, // Arcana symbol
+            34272, // Morass symbol
+            34585  // Esfera symbol
+    };
+    private static final int[] ALL_SYMBOL_ITEMS = {
+            1712001, 1712002, 1712003, 1712004, 1712005, 1712006,
+            1713000, 1713001
+    };
     private static final int[] GM_SHOP_ITEMS = {
             1202186, 1202236, 1202248, 1202249, 1202250, 1202251,
             1113073, 1113074, 1113075, 1113055, 1113155, 1113269, 1113313, 1113305, 1113306,
@@ -133,6 +149,8 @@ public class AdminCommands {
             2049371, 2049376, 2644007, 2048767, 2048717, 2048716,
             2590009, 2591123, 2591595
     };
+    private static final Pattern NON_ALNUM = Pattern.compile("[^a-z0-9]+");
+
     private static NpcShopItem createMesoShopItem(int shopId, int itemId) {
         NpcShopItem nsi = new NpcShopItem();
         nsi.setShopID(shopId);
@@ -189,6 +207,133 @@ public class AdminCommands {
             return (Equip) chr.getInventoryByType(InvType.DEC).getItemBySlot(slot);
         }
         return getAdminEquipBySlot(chr, Integer.parseInt(slotArg));
+    }
+
+    private static void completeQuestSet(Char chr, Set<Integer> questIds) {
+        for (int questId : questIds) {
+            chr.getQuestManager().completeQuest(questId, false);
+        }
+    }
+
+    private static void addMissingSymbolItems(Char chr) {
+        for (int itemId : ALL_SYMBOL_ITEMS) {
+            if (chr.hasItem(itemId)) {
+                continue;
+            }
+            Item item = ItemData.getEquipDeepCopy(itemId, false, chr.getJob());
+            if (item != null) {
+                chr.addItemToInventory(item);
+            }
+        }
+    }
+
+    private static void completeQuestIds(Char chr, int... questIds) {
+        for (int questId : questIds) {
+            chr.getQuestManager().completeQuest(questId, false);
+        }
+    }
+
+    private static String normalizeNodeSkillName(String name) {
+        if (name == null) {
+            return "";
+        }
+        return NON_ALNUM.matcher(name.toLowerCase(Locale.US)).replaceAll("");
+    }
+
+    private static boolean hasMatrixNode(Char chr, int iconId, int... skillIds) {
+        int[] expected = Arrays.stream(skillIds).filter(skillId -> skillId != 0).sorted().toArray();
+        for (MatrixRecord mr : chr.getSortedMatrixRecords()) {
+            if (mr.getIconID() != iconId) {
+                continue;
+            }
+            int[] existing = Arrays.stream(mr.getSkills()).filter(skillId -> skillId != 0).sorted().toArray();
+            if (Arrays.equals(existing, expected)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void addMaxedMatrixNode(Char chr, int iconId, int... skillIds) {
+        int[] filtered = Arrays.stream(skillIds).filter(skillId -> skillId != 0).toArray();
+        if (filtered.length == 0 || hasMatrixNode(chr, iconId, filtered)) {
+            return;
+        }
+        MatrixRecord mr = new MatrixRecord(chr);
+        mr.setIconID(iconId);
+        mr.setSlv(mr.getMaxLevel());
+        mr.setSkillID1(filtered[0]);
+        if (filtered.length > 1) {
+            mr.setSkillID2(filtered[1]);
+        }
+        if (filtered.length > 2) {
+            mr.setSkillID3(filtered[2]);
+        }
+        chr.addMatrixRecord(mr);
+    }
+
+    private static int getIconIdForSkill(List<VCoreInfo> infos, int skillId) {
+        return infos.stream()
+                .filter(info -> info.getSkillID() == skillId)
+                .map(VCoreInfo::getIconID)
+                .findFirst()
+                .orElse(0);
+    }
+
+    private static void grantVSkillNodes(Char chr) {
+        List<VCoreInfo> infos = VCoreData.getPossibilitiesByJob(chr.getJob());
+        if (infos == null) {
+            return;
+        }
+        infos.stream()
+                .filter(VCoreInfo::isSkill)
+                .collect(Collectors.toMap(VCoreInfo::getSkillID, info -> info, (left, right) -> left, LinkedHashMap::new))
+                .values()
+                .forEach(info -> addMaxedMatrixNode(chr, info.getIconID(), info.getSkillID()));
+    }
+
+    private static void grantPerfectBoostNodes(Char chr) {
+        List<VCoreInfo> infos = VCoreData.getPossibilitiesByJob(chr.getJob());
+        if (infos == null) {
+            return;
+        }
+        List<VCoreInfo> enforceInfos = infos.stream()
+                .filter(VCoreInfo::isEnforce)
+                .collect(Collectors.toMap(VCoreInfo::getSkillID, info -> info, (left, right) -> left, LinkedHashMap::new))
+                .values()
+                .stream()
+                .collect(Collectors.toList());
+        if (enforceInfos.isEmpty()) {
+            return;
+        }
+
+        List<Integer> boostSkills = enforceInfos.stream()
+                .sorted(Comparator.comparing((VCoreInfo info) -> {
+                    SkillStringInfo ssi = StringData.getSkillStringById(info.getSkillID());
+                    return ssi != null ? normalizeNodeSkillName(ssi.getName()) : "";
+                }).thenComparingInt(VCoreInfo::getSkillID))
+                .map(VCoreInfo::getSkillID)
+                .collect(Collectors.toList());
+        if (boostSkills.size() < 3) {
+            return;
+        }
+
+        for (int i = 0; i < boostSkills.size(); i++) {
+            int mainSkillId = boostSkills.get(i);
+            int secondSkillId = boostSkills.get((i + 1) % boostSkills.size());
+            int thirdSkillId = boostSkills.get((i + 2) % boostSkills.size());
+            int iconId = getIconIdForSkill(enforceInfos, mainSkillId);
+            if (iconId == 0) {
+                continue;
+            }
+            addMaxedMatrixNode(chr, iconId, mainSkillId, secondSkillId, thirdSkillId);
+        }
+    }
+
+    private static void grantAdminVNodes(Char chr) {
+        grantVSkillNodes(chr);
+        grantPerfectBoostNodes(chr);
+        chr.write(WvsContext.matrixUpdate(chr, false, 0, 0));
     }
 
     private static void startAdminSelectionScript(Char chr, Object session) {
@@ -326,7 +471,16 @@ public class AdminCommands {
     @Command(names = {"fifthjob", "V"}, requiredType = Tester)
     public static class V extends AdminCommand {
         public static void execute(Char chr, String[] args) {
-            chr.getQuestManager().completeQuest(QuestConstants.FIFTH_JOB_QUEST);
+            chr.getQuestManager().completeQuest(QuestConstants.FIFTH_JOB_QUEST, false);
+            chr.getQuestManager().completeQuest(QuestConstants.A_DIVINE_POWER, false);
+            completeQuestIds(chr, SYMBOL_UNLOCK_QUESTS);
+            completeQuestSet(chr, QuestConstants.ARCANA_QUESTS);
+            completeQuestSet(chr, QuestConstants.MORASS_QUESTS);
+            completeQuestSet(chr, QuestConstants.ESFERA_QUESTS);
+            completeQuestSet(chr, QuestConstants.CERNIUM_QUESTS);
+            completeQuestSet(chr, QuestConstants.HOTEL_ARCUS_QUESTS);
+            addMissingSymbolItems(chr);
+            grantAdminVNodes(chr);
         }
     }
 
