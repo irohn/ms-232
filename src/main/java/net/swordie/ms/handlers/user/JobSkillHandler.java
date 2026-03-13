@@ -84,6 +84,8 @@ import static net.swordie.ms.enums.StealMemoryType.STEAL_SKILL;
 import static net.swordie.ms.life.mob.skill.MobSkillID.GiveMeHeal;
 
 public class JobSkillHandler {
+    private static final int MAX_ADMIN_ARROW_PLATTERS = 20;
+
 
     private static final Logger log = LogManager.getLogger(JobSkillHandler.class);
 
@@ -278,10 +280,19 @@ public class JobSkillHandler {
         if (skill != null && skill.getCurrentLevel() > 0) {
             Field field = chr.getField();
             Set<FieldAttackObj> currentFaos = field.getFieldAttackObjects();
-            // remove the old arrow platter
-            currentFaos.stream()
+            var ownedArrowPlatters = currentFaos.stream()
                     .filter(fao -> fao.getOwnerID() == chr.getId() && fao.getTemplateId() == 1)
-                    .findAny().ifPresent(field::removeLife);
+                    .toList();
+            if (chr.getUser().getAccountType() == net.swordie.ms.enums.AccountType.Admin) {
+                if (ownedArrowPlatters.size() >= MAX_ADMIN_ARROW_PLATTERS) {
+                    ownedArrowPlatters.stream()
+                            .min(Comparator.comparingInt(FieldAttackObj::getObjectId))
+                            .ifPresent(field::removeLife);
+                }
+            } else {
+                // remove the old arrow platter
+                ownedArrowPlatters.stream().findAny().ifPresent(field::removeLife);
+            }
             SkillInfo si = SkillData.getSkillInfoById(skillID);
             int slv = skill.getCurrentLevel();
             FieldAttackObj fao = new FieldAttackObj(1, chr.getId(), chr.getPosition().deepCopy(), flip);
