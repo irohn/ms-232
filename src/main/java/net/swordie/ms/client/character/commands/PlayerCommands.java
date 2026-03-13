@@ -262,6 +262,37 @@ public class PlayerCommands {
             chr.chatMessage("@enhance: Opens the enhancement consumables shop.");
             chr.chatMessage("@inspect: Opens an npc where you can see others' equipped items and their stats.");
             chr.chatMessage("@players/checkmap: Shows you who are currently in your map.");
+            chr.chatMessage("@legionchars: Shows how many eligible Legion characters you have in each job type.");
+        }
+    }
+
+    @Command(names = {"legionchars"}, requiredType = Player)
+    public static class LegionChars extends PlayerCommand {
+
+        public static void execute(Char chr, String[] args) {
+            Map<String, Integer> counts = new LinkedHashMap<>();
+            counts.put("Warriors", 0);
+            counts.put("Magicians", 0);
+            counts.put("Archers", 0);
+            counts.put("Thieves", 0);
+            counts.put("Pirates", 0);
+            counts.put("Other", 0);
+
+            for (Char legionChar : chr.getUnion().getEligibleUnionChars()) {
+                String category = switch (JobConstants.getBranchIdByJob(legionChar.getJob())) {
+                    case 1 -> "Warriors";
+                    case 2 -> "Magicians";
+                    case 3 -> "Archers";
+                    case 4 -> "Thieves";
+                    case 5 -> "Pirates";
+                    default -> "Other";
+                };
+                counts.put(category, counts.get(category) + 1);
+            }
+
+            int total = counts.values().stream().mapToInt(Integer::intValue).sum();
+            chr.chatMessage("Eligible Legion characters: %d", total);
+            counts.forEach((category, count) -> chr.chatMessage("%s: %d", category, count));
         }
     }
 

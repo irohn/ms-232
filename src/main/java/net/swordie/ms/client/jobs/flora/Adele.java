@@ -633,7 +633,8 @@ public class Adele extends Job {
                 Position position = inPacket.decodePosition();
 
                 Summon territory = Summon.getSummonByNoCTS(chr, skillId, slv);
-                territory.setSummonTerm((si.getValue(time, slv) + chr.getSkillStatValue(time, TERRITORY_PERSIST)));
+                territory.setSummonTerm(Summon.getSummonDurationTerm(chr,
+                        si.getValue(time, slv) + chr.getSkillStatValue(time, TERRITORY_PERSIST)));
                 territory.setPosition(position);
                 territory.setMoveAbility(MoveAbility.Stop);
                 territory.setCurFoothold((short) field.findFootHoldBelow(position).getId());

@@ -313,11 +313,7 @@ public class Summon extends Life {
         summon.setChr(chr);
         summon.setSkillID(skillID);
         summon.setSlv(slv);
-        if (SkillConstants.isNoBuffDurationAppliedSkill(skillID)) {
-            summon.setSummonTerm(si.getValue(SkillStat.time, slv));
-        } else {
-            summon.setSummonTerm((int) ((si.getValue(SkillStat.time, slv) * chr.getTotalStat(BaseStat.summonTimeR)) / 100D));
-        }
+        summon.setSummonTerm(getSummonDurationTerm(chr, si.getValue(SkillStat.time, slv)));
         summon.setCharLevel(chr.getLevel());
         summon.setPosition(chr.getPosition().deepCopy());
         summon.setMoveAction((byte) 4);
@@ -331,6 +327,13 @@ public class Summon extends Life {
         summon.setTemplateId(skillID);
         summon.setAttackActive(true);
         return summon;
+    }
+
+    public static int getSummonDurationTerm(Char chr, int baseTerm) {
+        if (baseTerm <= 0) {
+            return baseTerm;
+        }
+        return Math.max(1, (int) Math.round(baseTerm * (chr.getTotalStat(BaseStat.summonTimeR) / 100D)));
     }
 
     public Position[] getKishinPositions() {

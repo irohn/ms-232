@@ -59,6 +59,7 @@ import net.swordie.ms.handlers.header.InHeader;
 import net.swordie.ms.life.AffectedArea;
 import net.swordie.ms.life.FieldAttackObj;
 import net.swordie.ms.life.Life;
+import net.swordie.ms.life.Summon;
 import net.swordie.ms.life.mob.Mob;
 import net.swordie.ms.life.mob.skill.MobSkill;
 import net.swordie.ms.life.mob.skill.MobSkillModule;
@@ -286,8 +287,9 @@ public class JobSkillHandler {
             FieldAttackObj fao = new FieldAttackObj(1, chr.getId(), chr.getPosition().deepCopy(), flip);
             field.spawnLife(fao, chr);
             field.broadcastPacket(FieldAttackObjPool.objCreate(fao), chr);
+            int duration = Summon.getSummonDurationTerm(chr, si.getValue(SkillStat.u, slv));
             ScheduledFuture sf = EventManager.addEvent(() -> field.removeLife(fao.getObjectId(), true),
-                    si.getValue(SkillStat.u, slv), TimeUnit.SECONDS);
+                    duration, TimeUnit.SECONDS);
             field.addLifeSchedule(fao, sf);
             field.broadcastPacket(FieldAttackObjPool.setAttack(fao.getObjectId(), 0));
             chr.setSkillCooldown(skillID, slv);

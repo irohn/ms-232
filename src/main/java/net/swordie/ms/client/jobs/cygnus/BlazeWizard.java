@@ -502,7 +502,8 @@ public class BlazeWizard extends Noblesse {
                 summon.setFlyMob(skillId == FIRES_OF_CREATION_FOX);
                 summon.setMoveAbility(skillId == FIRES_OF_CREATION_LION ? MoveAbility.WalkSmart : MoveAbility.Walk);
                 summon.setAssistType(AssistType.AttackCounter);
-                summon.setSummonTerm(SkillData.getSkillInfoById(FIRES_OF_CREATION).getValue(time, slv));
+                summon.setSummonTerm(Summon.getSummonDurationTerm(chr,
+                        SkillData.getSkillInfoById(FIRES_OF_CREATION).getValue(time, slv)));
                 field.spawnSummonAndRemoveOld(summon);
 
                 o1.nOption = si.getValue(y, slv);

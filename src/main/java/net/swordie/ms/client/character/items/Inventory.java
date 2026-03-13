@@ -6,6 +6,7 @@ import net.swordie.ms.enums.BaseStat;
 import net.swordie.ms.enums.InvType;
 import net.swordie.ms.loaders.EtcData;
 import net.swordie.ms.loaders.ItemData;
+import net.swordie.ms.loaders.StringData;
 import net.swordie.ms.loaders.containerclasses.ItemInfo;
 import net.swordie.ms.loaders.containerclasses.SetItemInfo;
 import net.swordie.ms.util.Util;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
  * Created on 11/23/2017.
  */
 public class Inventory {
+    private static final int BONUS_SUMMON_DURATION = 50;
 
     private static final ItemDao itemDao = (ItemDao) SworDaoFactory.getByClass(Item.class);
 
@@ -327,7 +329,34 @@ public class Inventory {
             }
         }
 
+        applyCustomSummonDurationBonuses();
+
         applySets(setCount, jokerItems);
+    }
+
+    private void applyCustomSummonDurationBonuses() {
+        double summonDurationBonus = 0;
+        for (var item : getItems()) {
+            if (!(item instanceof Equip equip)) {
+                continue;
+            }
+            String itemName = StringData.getItemStringById(equip.getItemId());
+            if (itemName == null) {
+                continue;
+            }
+            String normalizedName = itemName.toLowerCase(Locale.ENGLISH);
+            if (normalizedName.contains("frenzy totem")) {
+                summonDurationBonus += BONUS_SUMMON_DURATION;
+            } else if (normalizedName.contains("battle-roid")
+                    || normalizedName.contains("battle roid")
+                    || normalizedName.contains("battleroid")) {
+                summonDurationBonus += BONUS_SUMMON_DURATION;
+            }
+        }
+        if (summonDurationBonus > 0) {
+            getBaseStats().put(BaseStat.summonTimeR,
+                    getBaseStats().getOrDefault(BaseStat.summonTimeR, 0D) + summonDurationBonus);
+        }
     }
 
     public void recalcArcBaseStats(Char chr) {

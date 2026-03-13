@@ -566,7 +566,8 @@ public class Xenon extends Job {
                 summon.setAssistType(at);
                 summon.setAttackActive(true);
                 summon.setMoveAbility(MoveAbility.Stop);
-                summon.setSummonTerm(si.getValue(time, slv) + (chr.hasSkill(HYPOGRAM_FIELD_PERSIST) ? 10 : 0));
+                summon.setSummonTerm(Summon.getSummonDurationTerm(chr,
+                        si.getValue(time, slv) + (chr.hasSkill(HYPOGRAM_FIELD_PERSIST) ? 10 : 0)));
                 field.spawnSummonAndRemoveOld(summon);
                 if (skillId == HYPOGRAM_FIELD_FUSION) {
                     AffectedArea aa = AffectedArea.getPassiveAA(chr, skillId, slv);
@@ -857,4 +858,3 @@ public class Xenon extends Job {
         chr.setJob(JobConstants.JobEnum.XENON_1.getJobId());
     }
 }
-

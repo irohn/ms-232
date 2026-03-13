@@ -447,7 +447,8 @@ public class Cannoneer extends Pirate {
                     summon.setMoveAbility(MoveAbility.Stop);
                     summon.setFlip(!isLeft);
                     summon.setPosition(position);
-                    summon.setSummonTerm(si.getValue(time, slv) + chr.getSkillStatValue(time, MONKEY_MALITIA_PERSIST));
+                    summon.setSummonTerm(Summon.getSummonDurationTerm(chr,
+                            si.getValue(time, slv) + chr.getSkillStatValue(time, MONKEY_MALITIA_PERSIST)));
                     if (chr.hasSkill(MONKEY_MALITIA_ENHANCE)) {
                         field.spawnSummon(summon);
                     } else {

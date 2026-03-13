@@ -753,7 +753,7 @@ public class WildHunter extends Citizen {
                     Summon jaguar = Summon.getSummonByNoCTS(chr, summonId, 1);
                     jaguar.setMoveAbility(MoveAbility.WalkRandom);
                     jaguar.setAssistType(AssistType.Attack);
-                    jaguar.setSummonTerm(si.getValue(time, slv));
+                    jaguar.setSummonTerm(Summon.getSummonDurationTerm(chr, si.getValue(time, slv)));
                     jaguar.setFlip(true);
                     jaguar.setState(0);
                     jaguar.setCount(300); // sniffed value

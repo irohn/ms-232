@@ -450,7 +450,8 @@ public class Mechanic extends Citizen {
                 summon.setMoveAbility(MoveAbility.Stop);
                 summon.setAssistType(AssistType.None);
                 summon.setAttackActive(false);
-                summon.setSummonTerm(si.getValue(SkillStat.time, slv) + chr.getSkillStatValue(time, SUPPORT_UNIT_HEX_PERSIST));
+                summon.setSummonTerm(Summon.getSummonDurationTerm(chr,
+                        si.getValue(SkillStat.time, slv) + chr.getSkillStatValue(time, SUPPORT_UNIT_HEX_PERSIST)));
                 field.spawnSummonAndRemoveOld(summon);
                 break;
             case ROBO_LAUNCHER_RM7:
