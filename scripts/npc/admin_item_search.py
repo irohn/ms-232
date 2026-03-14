@@ -132,6 +132,7 @@ else:
                 sm.sendSayOkay("Invalid selection.")
             else:
                 chosen_item_id = results[sel][0]
+                chosen_item_name = results[sel][1]
                 quantity = sm.sendAskNumber(
                     "Enter quantity for #v"
                     + str(chosen_item_id)
@@ -148,6 +149,14 @@ else:
                     sm.sendSayOkay("Please make room in your inventory first.")
                 else:
                     sm.giveItem(chosen_item_id, quantity)
+                    sm.log.info(
+                        "[{}] !s selected item {} ({}) x{}".format(
+                            chr.getName(),
+                            chosen_item_name,
+                            chosen_item_id,
+                            quantity,
+                        )
+                    )
                     sm.chat("Debug: selected itemID = " + str(chosen_item_id))
                     sm.sendSayOkay(
                         "You received "

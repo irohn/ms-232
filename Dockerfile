@@ -2,11 +2,11 @@ FROM maven:3.9.9-eclipse-temurin-21 AS builder
 
 WORKDIR /build
 COPY pom.xml ./
-COPY src ./src
 
 # Cache dependencies before copying the rest of the repository.
 RUN mvn -B -q dependency:go-offline
 
+COPY src ./src
 COPY resources ./resources
 COPY scripts ./scripts
 COPY sql ./sql

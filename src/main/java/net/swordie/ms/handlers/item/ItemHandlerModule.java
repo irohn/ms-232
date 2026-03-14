@@ -359,6 +359,78 @@ public class ItemHandlerModule {
         return false;
     }
 
+    protected static boolean handleUniCube(Client c, InPacket inPacket, Char chr, int itemId, Item item) {
+        short ePos = (short) inPacket.decodeInt();
+        if (inPacket.getUnreadAmount() >= 4) {
+            inPacket.decodeInt();
+        }
+        InvType invType = ePos < 0 ? EQUIPPED : EQUIP;
+        Equip equip = (Equip) chr.getInventoryByType(invType).getItemBySlot(ePos);
+        if (equip == null) {
+            chr.chatMessage(SystemNotice, "Could not find equip.");
+            chr.dispose();
+            return true;
+        } else if (equip.getBaseGrade() < ItemGrade.Rare.getVal()) {
+            String msg = String.format("Character %d tried to use Uni Cube (id %d) on an equip without a potential (id %d)", chr.getId(), itemId, equip.getItemId());
+            chr.getOffenseManager().addOffense(msg);
+            chr.dispose();
+            return true;
+        }
+        Map<String, Object> props = new HashMap<>();
+        props.put("uniCube", new UniCubeSession(equip, item, ePos));
+        chr.getScriptManager().startScript(0, "uni_cube", ScriptType.Npc, props);
+        return false;
+    }
+
+    protected static boolean handleDoublePotentialCube(Client c, InPacket inPacket, Char chr, int itemId, Item item) {
+        short ePos = (short) inPacket.decodeInt();
+        if (inPacket.getUnreadAmount() >= 4) {
+            inPacket.decodeInt();
+        }
+        InvType invType = ePos < 0 ? EQUIPPED : EQUIP;
+        Equip equip = (Equip) chr.getInventoryByType(invType).getItemBySlot(ePos);
+        if (equip == null) {
+            chr.chatMessage(SystemNotice, "Could not find equip.");
+            chr.dispose();
+            return true;
+        } else if (equip.getBaseGrade() < ItemGrade.Rare.getVal() || equip.getBonusGrade() < ItemGrade.Rare.getVal()) {
+            String msg = String.format("Character %d tried to use Double Potential Cube (id %d) on an equip without both potentials (id %d)", chr.getId(), itemId, equip.getItemId());
+            chr.getOffenseManager().addOffense(msg);
+            chr.dispose();
+            return true;
+        }
+
+        boolean baseTierUp = false;
+        boolean bonusTierUp = false;
+        short baseHidden = ItemGrade.getHiddenGradeByVal(equip.getBaseGrade()).getVal();
+        if (baseHidden < ItemGrade.HiddenLegendary.getVal() && Util.succeedProp(50)) {
+            baseHidden++;
+            baseTierUp = true;
+        }
+        short bonusHidden = ItemGrade.getHiddenGradeByVal(equip.getBonusGrade()).getVal();
+        if (bonusHidden < ItemGrade.HiddenLegendary.getVal() && Util.succeedProp(50)) {
+            bonusHidden++;
+            bonusTierUp = true;
+        }
+
+        equip.setHiddenOptionBase(baseHidden, ItemConstants.THIRD_LINE_CHANCE);
+        equip.releaseOptions(false);
+        equip.setHiddenOptionBonus(bonusHidden, ItemConstants.THIRD_LINE_CHANCE);
+        equip.releaseOptions(true);
+
+        c.write(FieldPacket.redCubeResult(chr, baseTierUp || bonusTierUp, itemId, ePos, equip));
+        c.write(FieldPacket.showItemReleaseEffect(chr.getId(), ePos, false));
+        equip.updateToChar(chr);
+        if (JobConstants.isZero(chr.getJob()) && ItemConstants.isLongOrBigSword(equip.getItemId())) {
+            int otherEquipPos = Math.abs(ePos) == 10 ? 11 : 10;
+            Equip otherEquip = (Equip) chr.getEquippedInventory().getItemBySlot(otherEquipPos);
+            otherEquip.copyItemOptionsFrom(equip);
+            otherEquip.updateToChar(chr);
+        }
+        chr.consumeItem(item);
+        return false;
+    }
+
     protected static boolean handleCube(Client c, InPacket inPacket, Char chr, short pos, int itemID, Item item) {
         short ePos = (short) inPacket.decodeInt();
         InvType invType = ePos < 0 ? EQUIPPED : EQUIP;
@@ -388,11 +460,12 @@ public class ItemHandlerModule {
                 chr.getField().broadcastPacket(UserPacket.showItemMemorialEffect(chr.getId(), true, itemID, ePos, pos));
                 c.write(WvsContext.blackCubeResult(equip, item.getBagIndex(), chr.getCashInventory().getQuantity(itemID) - 1, chr.getMemorialCubeInfo()));
                 break;
-            case ItemConstants.OCCULT_CUBE:
-            case ItemConstants.CRAFTSMAN_CUBE:
-            case ItemConstants.MEISTER_CUBE:
-                c.write(FieldPacket.inGameCubeResult(chr, tierUp, itemID, ePos, equip));
-                c.write(FieldPacket.showItemReleaseEffect(chr.getId(), ePos, false));
+            default:
+                if (ItemConstants.isInGameCube(itemID)) {
+                    c.write(FieldPacket.inGameCubeResult(chr, tierUp, itemID, ePos, equip));
+                    c.write(FieldPacket.showItemReleaseEffect(chr.getId(), ePos, false));
+                }
+                break;
         }
         if (itemID != ItemConstants.BLACK_CUBE) {
             equip.updateToChar(chr);
@@ -428,6 +501,38 @@ public class ItemHandlerModule {
         equip.applyEqualityCube(false);
         c.write(FieldPacket.redCubeResult(chr, false, itemId, ePos, equip));
         c.write(FieldPacket.showItemReleaseEffect(chr.getId(), ePos, false));
+        equip.updateToChar(chr);
+        if (JobConstants.isZero(chr.getJob()) && ItemConstants.isLongOrBigSword(equip.getItemId())) {
+            int otherEquipPos = Math.abs(ePos) == 10 ? 11 : 10;
+            Equip otherEquip = (Equip) chr.getEquippedInventory().getItemBySlot(otherEquipPos);
+            otherEquip.copyItemOptionsFrom(equip);
+            otherEquip.updateToChar(chr);
+        }
+        chr.consumeItem(item);
+        return false;
+    }
+
+    protected static boolean handleEnlighteningMiracleCube(Client c, InPacket inPacket, Char chr, short pos, int itemId, Item item) {
+        short ePos = (short) inPacket.decodeInt();
+        if (inPacket.getUnreadAmount() >= 4) {
+            inPacket.decodeInt();
+        }
+        InvType invType = ePos < 0 ? EQUIPPED : EQUIP;
+        Equip equip = (Equip) chr.getInventoryByType(invType).getItemBySlot(ePos);
+        if (equip == null) {
+            chr.chatMessage(SystemNotice, "Could not find equip.");
+            chr.dispose();
+            return true;
+        } else if (equip.getBonusGrade() < ItemGrade.Rare.getVal()) {
+            String msg = String.format("Character %d tried to use Enlightening Miracle Cube (id %d) on an equip without bonus potential (id %d)", chr.getId(), itemId, equip.getItemId());
+            chr.getOffenseManager().addOffense(msg);
+            chr.dispose();
+            return true;
+        }
+
+        equip.applyEnlighteningMiracleCube();
+        c.write(FieldPacket.bonusCubeResult(chr, false, itemId, ePos, equip));
+        c.write(FieldPacket.showItemReleaseEffect(chr.getId(), ePos, true));
         equip.updateToChar(chr);
         if (JobConstants.isZero(chr.getJob()) && ItemConstants.isLongOrBigSword(equip.getItemId())) {
             int otherEquipPos = Math.abs(ePos) == 10 ? 11 : 10;

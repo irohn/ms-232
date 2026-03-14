@@ -133,6 +133,15 @@ public class ItemHandler {
                 case ItemConstants.CUBE_OF_EQUALITY:
                     ItemHandlerModule.handleCubeOfEquality(c, inPacket, chr, pos, itemId, item);
                     break;
+                case ItemConstants.ENLIGHTENING_MIRACLE_CUBE:
+                    ItemHandlerModule.handleEnlighteningMiracleCube(c, inPacket, chr, pos, itemId, item);
+                    break;
+                case ItemConstants.UNI_CUBE:
+                    ItemHandlerModule.handleUniCube(c, inPacket, chr, itemId, item);
+                    break;
+                case ItemConstants.DOUBLE_POTENTIAL_CUBE:
+                    ItemHandlerModule.handleDoublePotentialCube(c, inPacket, chr, itemId, item);
+                    break;
                 case 5062024: // Violet cube
                     ItemHandlerModule.handleVioletCube(c, inPacket, chr, itemId, item);
                     return;
@@ -205,10 +214,12 @@ public class ItemHandler {
         Item item = cashInv.getItemBySlot(pos);
         switch(item.getItemId())
         {
-            case ItemConstants.OCCULT_CUBE:
-            case ItemConstants.CRAFTSMAN_CUBE:
-            case ItemConstants.MEISTER_CUBE:
-                ItemHandlerModule.handleCube(c, inPacket, chr, pos, item.getItemId(), item);
+            default:
+                if (ItemConstants.isOccultCube(item.getItemId())
+                        || ItemConstants.isCraftsmanCube(item.getItemId())
+                        || ItemConstants.isMeisterCube(item.getItemId())) {
+                    ItemHandlerModule.handleCube(c, inPacket, chr, pos, item.getItemId(), item);
+                }
                 break;
         }
     }
@@ -227,12 +238,13 @@ public class ItemHandler {
             return;
         }
         switch (itemId) {
-            case ItemConstants.BONUS_OCCULT_CUBE:
-                ItemHandlerModule.handleBonusOccultCube(c, inPacket, chr, pos, itemId, item);
-                break;
             default:
-                chr.chatMessage(Mob, String.format("Unhandled cube item %d.", itemId));
-                chr.dispose();
+                if (ItemConstants.isBonusOccultCube(itemId)) {
+                    ItemHandlerModule.handleBonusOccultCube(c, inPacket, chr, pos, itemId, item);
+                } else {
+                    chr.chatMessage(Mob, String.format("Unhandled cube item %d.", itemId));
+                    chr.dispose();
+                }
                 break;
         }
     }

@@ -41,12 +41,44 @@ public class ItemConstants {
     public static final int INTENSE_POWER_CRYSTAL = 4001886;
 
     public static final int RED_CUBE = 5062009;
+    public static final int DOUBLE_POTENTIAL_CUBE = 5062006;
     public static final int BLACK_CUBE = 5062010;
+    public static final int ENLIGHTENING_MIRACLE_CUBE = 5062005;
     public static final int CUBE_OF_EQUALITY = 5062021;
+    public static final int UNI_CUBE = 5062090;
     public static final int OCCULT_CUBE = 2711000;
     public static final int MEISTER_CUBE = 2711004;
     public static final int CRAFTSMAN_CUBE = 2711003;
     public static final int BONUS_OCCULT_CUBE = 2730002;
+    public static final Set<Integer> OCCULT_CUBE_IDS = Set.of(
+            2710000,
+            2711000,
+            2711001,
+            2711009,
+            2711011
+    );
+    public static final Set<Integer> BONUS_OCCULT_CUBE_IDS = Set.of(
+            2730000,
+            2730002,
+            2730004,
+            2730006
+    );
+    public static final Set<Integer> CRAFTSMAN_CUBE_IDS = Set.of(
+            2710026,
+            2711023,
+            2710002,
+            2710007,
+            2711003,
+            2711005,
+            2711012
+    );
+    public static final Set<Integer> MEISTER_CUBE_IDS = Set.of(
+            2711017,
+            2710003,
+            2711004,
+            2711006,
+            2711013
+    );
 
     public static final int BONUS_POT_CUBE = 5062500;
     public static final int SPECIAL_BONUS_POT_CUBE = 5062501;
@@ -1055,6 +1087,26 @@ public class ItemConstants {
                 break;
         }
         return res;
+    }
+
+    public static boolean isCraftsmanCube(int itemId) {
+        return CRAFTSMAN_CUBE_IDS.contains(itemId);
+    }
+
+    public static boolean isOccultCube(int itemId) {
+        return OCCULT_CUBE_IDS.contains(itemId);
+    }
+
+    public static boolean isBonusOccultCube(int itemId) {
+        return BONUS_OCCULT_CUBE_IDS.contains(itemId);
+    }
+
+    public static boolean isMeisterCube(int itemId) {
+        return MEISTER_CUBE_IDS.contains(itemId);
+    }
+
+    public static boolean isInGameCube(int itemId) {
+        return isOccultCube(itemId) || isCraftsmanCube(itemId) || isMeisterCube(itemId);
     }
 
     public static boolean isEquip(int id) {

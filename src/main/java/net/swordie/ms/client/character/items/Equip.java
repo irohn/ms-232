@@ -2104,6 +2104,13 @@ public class Equip extends Item {
         }
     }
 
+    public void applyEnlighteningMiracleCube() {
+        List<Integer> possibleOptions = ItemConstants.getWeightedOptionsByEquip(this, false, ItemGrade.Legendary);
+        for (int i = 0; i < 3; i++) {
+            setOptionBonus(i, Util.getRandomFromCollection(possibleOptions));
+        }
+    }
+
     public void updateDecentSkills(Char chr, boolean equip) { // Works on the principle that equips cannot have their potential/socket changed whilst equipped.
         int jobId = chr.getJob();
         Set<Integer> decentSkills = new HashSet<>();

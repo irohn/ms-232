@@ -34,9 +34,9 @@ public class ItemUpgradeHandler {
     private static final int[] NORMAL_CHAOS_WEIGHTS = {49_400, 29_700, 36_500, 80_000, 137_000, 183_800, 193_100, 158_700, 102_100, 19_800, 9_900};
     private static final int[] INCREDIBLE_COG_VALUES = {0, 1, 2, 3, 4, 6};
     private static final int[] INCREDIBLE_COG_WEIGHTS = {183_827, 330_081, 238_669, 138_661, 49_438, 59_324};
-    // Based on the normal chaos distribution, extended to -7..7 with small tails and a slight positive bias.
-    private static final int[] MIRACULOUS_CHAOS_VALUES = {-7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7};
-    private static final int[] MIRACULOUS_CHAOS_WEIGHTS = {4_000, 8_000, 48_116, 28_928, 35_551, 77_920, 133_438, 179_021, 188_079, 154_574, 99_445, 19_285, 9_643, 10_000, 4_000};
+    // Based on the normal chaos distribution, extended to -6..6 with a slight positive bias.
+    private static final int[] MIRACULOUS_CHAOS_VALUES = {-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6};
+    private static final int[] MIRACULOUS_CHAOS_WEIGHTS = {12_000, 48_116, 28_928, 35_551, 77_920, 133_438, 179_021, 188_079, 154_574, 99_445, 19_285, 9_643, 14_000};
 
     private static int rollWeightedStat(int low, int mid, int high) {
         int roll = Util.getRandom(99);
@@ -107,7 +107,7 @@ public class ItemUpgradeHandler {
         int amount;
         if (maximize) {
             if (isMiraculousChaosScroll(scrollID)) {
-                amount = 7;
+                amount = 6;
             } else if (isIncredibleChaosOfGoodnessScroll(scrollID)) {
                 amount = 6;
             } else {
@@ -128,25 +128,33 @@ public class ItemUpgradeHandler {
         return amount;
     }
 
-    private static void applyCustomXScrollStats(Equip equip, int scrollID) {
+    private static int rollWeightedStat(int low, int mid, int high, boolean maximize) {
+        return maximize ? high : rollWeightedStat(low, mid, high);
+    }
+
+    private static int rollTwoWeightedStat(int low, int high, int lowChance, boolean maximize) {
+        return maximize ? high : rollTwoWeightedStat(low, high, lowChance);
+    }
+
+    private static void applyCustomXScrollStats(Equip equip, int scrollID, boolean maximize) {
         switch (scrollID) {
             case 2615031:
             case 2615053:
             case 2616061:
             case 2048817:
             case 2048829:
-                equip.addStat(iPAD, rollWeightedStat(5, 6, 7));
+                equip.addStat(iPAD, rollWeightedStat(5, 6, 7, maximize));
                 return;
             case 2615032:
             case 2616062:
             case 2048819:
-                equip.addStat(iMAD, rollWeightedStat(5, 6, 7));
+                equip.addStat(iMAD, rollWeightedStat(5, 6, 7, maximize));
                 return;
             case 2047409:
-                equip.addStat(iPAD, rollTwoWeightedStat(4, 5, 50));
+                equip.addStat(iPAD, rollTwoWeightedStat(4, 5, 50, maximize));
                 return;
             case 2047410:
-                equip.addStat(iMAD, rollTwoWeightedStat(4, 5, 50));
+                equip.addStat(iMAD, rollTwoWeightedStat(4, 5, 50, maximize));
                 return;
             case 2047405:
             case 2047407:
@@ -156,7 +164,7 @@ public class ItemUpgradeHandler {
             case 2047402:
             case 2048094:
             case 2048804:
-                equip.addStat(iPAD, rollTwoWeightedStat(4, 5, 85));
+                equip.addStat(iPAD, rollTwoWeightedStat(4, 5, 85, maximize));
                 return;
             case 2047406:
             case 2046408:
@@ -166,27 +174,27 @@ public class ItemUpgradeHandler {
             case 2047403:
             case 2048095:
             case 2048805:
-                equip.addStat(iMAD, rollTwoWeightedStat(4, 5, 85));
+                equip.addStat(iMAD, rollTwoWeightedStat(4, 5, 85, maximize));
                 return;
             case 2613050:
             case 2612061:
-                equip.addStat(iPAD, rollWeightedStat(10, 11, 12));
+                equip.addStat(iPAD, rollWeightedStat(10, 11, 12, maximize));
                 return;
             case 2613051:
             case 2612062:
-                equip.addStat(iMAD, rollWeightedStat(10, 11, 12));
+                equip.addStat(iMAD, rollWeightedStat(10, 11, 12, maximize));
                 return;
             case 2046991:
             case 2640024:
             case 2047844:
-                equip.addStat(iPAD, rollWeightedStat(9, 10, 11));
+                equip.addStat(iPAD, rollWeightedStat(9, 10, 11, maximize));
                 return;
             case 2046992:
             case 2040025:
-                equip.addStat(iMAD, rollWeightedStat(9, 10, 11));
+                equip.addStat(iMAD, rollWeightedStat(9, 10, 11, maximize));
                 return;
             case 2046829:
-                equip.addStat(iPAD, rollWeightedStat(2, 3, 4));
+                equip.addStat(iPAD, rollWeightedStat(2, 3, 4, maximize));
                 return;
             default:
                 return;
@@ -740,7 +748,7 @@ public class ItemUpgradeHandler {
                                 equip.addStat(ss.getEquipStat(), val);
                             }
                         }
-                        applyCustomXScrollStats(equip, scrollID);
+                        applyCustomXScrollStats(equip, scrollID, chr.isAdminInvincible());
                     }
                 }
                 if (useTuc) {

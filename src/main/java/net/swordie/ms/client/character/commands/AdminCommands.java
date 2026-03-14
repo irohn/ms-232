@@ -1786,16 +1786,18 @@ public class AdminCommands {
     public static class Invincible extends AdminCommand {
         public static void execute(Char chr, String[] args) {
             TemporaryStatManager tsm = chr.getTemporaryStatManager();
-            chr.setInvincible(!chr.isInvincible());
-            chr.chatMessage("Invincibility: " + chr.isInvincible());
-            if (chr.isInvincible()) {
+            boolean newState = !chr.isAdminInvincible();
+            chr.setInvincible(newState);
+            if (newState) {
                 Option o = new Option();
                 o.nOption = 3;
+                o.rOption = 1;
                 tsm.putCharacterStatValue(IndieNotDamaged, o);
             } else {
                 tsm.removeStat(IndieNotDamaged);
             }
             tsm.sendSetStatPacket();
+            chr.chatMessage("Invincibility: " + chr.isAdminInvincible());
         }
     }
 
