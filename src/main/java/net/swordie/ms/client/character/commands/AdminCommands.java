@@ -12,6 +12,7 @@ import net.swordie.ms.client.character.items.AdminFlamePickerSession;
 import net.swordie.ms.client.character.items.AdminOzRingSession;
 import net.swordie.ms.client.character.items.AdminPotentialPickerSession;
 import net.swordie.ms.client.character.items.AdminSetEquipSession;
+import net.swordie.ms.client.character.items.AdminSoulWeaponSession;
 import net.swordie.ms.client.character.items.Equip;
 import net.swordie.ms.client.character.items.Item;
 import net.swordie.ms.client.character.items.ItemOption;
@@ -1243,6 +1244,28 @@ public class AdminCommands {
                 return;
             }
             startAdminSelectionScript(chr, new AdminPotentialPickerSession(equip, (short) invPosition, true));
+        }
+    }
+
+    @Command(names = {"soulweapon"}, requiredType = Admin)
+    public static class SoulWeapon extends AdminCommand {
+
+        public static void execute(Char chr, String[] args) {
+            if (args.length < 2) {
+                chr.chatMessage("Usage: !soulweapon <inv position>");
+                return;
+            }
+            int invPosition = Integer.parseInt(args[1]);
+            Equip equip = getAdminEquipBySlot(chr, invPosition);
+            if (equip == null) {
+                chr.chatMessage("There is no equip on this position.");
+                return;
+            }
+            if (!ItemConstants.isWeapon(equip.getItemId())) {
+                chr.chatMessage("Only weapons can become soul weapons.");
+                return;
+            }
+            startAdminSelectionScript(chr, new AdminSoulWeaponSession(equip, (short) invPosition));
         }
     }
 

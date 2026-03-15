@@ -137,6 +137,45 @@ public class SoulCollectionConstants {
     private static final int[] darknellMagniSoulIds = new int[] {677,};
     // endregion Soul Ids
 
+    public static int getRepresentativeSoulId(BossSoulType bossSoulType) {
+        return switch (bossSoulType) {
+            case Cygnus -> cygnusSoulIds[0];
+            case VonLeon -> vonLeonSoulIds[0];
+            case SpiritOfRock -> spiritOfRockSoulIds[0];
+            case Ephenia -> epheniaSoulIds[0];
+            case Balrog -> balrogSoulIds[0];
+            case PrisonGuardAni -> prisonGuardAniSoulIds[0];
+            case MuGong -> muGongSoulIds[0];
+            case Ursus -> ursusSoulIds[0];
+            case Magnus -> magnusSoulIds[0];
+            case Arkarium -> arkariumSoulIds[0];
+            case PinkBean -> pinkbeanSoulIds[0];
+            case Lotus -> lotusSoulIds[0];
+            case Damien -> damienSoulIds[0];
+            case BlackKnight -> blackKnightSoulIds[0];
+            case MadMage -> madMageSoulIds[0];
+            case ViciousHunter -> viciousHunterSoulIds[0];
+            case RampantCyborg -> rampantCyborgSoulIds[0];
+            case BadBrawler -> badBrawlerSoulIds[0];
+            case Zakum -> zakumSoulIds[0];
+            case Hilla -> hillaSoulIds[0];
+            case VonBon -> vonBonSoulIds[0];
+            case Pierre -> pierreSoulIds[0];
+            case CrimsonQueen -> crimsonQueenSoulIds[0];
+            case Vellum -> vellumSoulIds[0];
+            case CaptainDarkgoo -> blackSlimeSoulIds[0];
+            case Xerxes -> xerxesSoulIds[0];
+            case Rex -> rexSoulIds[0];
+            case Pianus -> pianusSoulIds[0];
+            case DragonRider -> dragonRiderSoulIds[0];
+            case Lucid -> lucidSoulIds[0];
+            case Papulatus -> papulatusSoulIds[0];
+            case Will -> willSoulIds[0];
+            case VerusHilla -> verusHillaSoulIds[0];
+            case Darknell -> darknellSoulIds[0];
+        };
+    }
+
     // region isSouldId Methods
     public static boolean isBalrogSoulId(int soulId) {
         return Arrays.stream(balrogSoulIds).anyMatch(s -> s == soulId);
