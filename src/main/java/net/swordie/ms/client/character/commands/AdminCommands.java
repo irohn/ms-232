@@ -12,6 +12,7 @@ import net.swordie.ms.client.character.items.AdminFlamePickerSession;
 import net.swordie.ms.client.character.items.AdminOzRingSession;
 import net.swordie.ms.client.character.items.AdminPotentialPickerSession;
 import net.swordie.ms.client.character.items.AdminSetEquipSession;
+import net.swordie.ms.client.character.items.AdminSkillSession;
 import net.swordie.ms.client.character.items.AdminSoulWeaponSession;
 import net.swordie.ms.client.character.items.Equip;
 import net.swordie.ms.client.character.items.Item;
@@ -26,11 +27,13 @@ import net.swordie.ms.client.character.skills.vmatrix.MatrixRecord;
 import net.swordie.ms.client.character.skills.atom.forceatom.ForceAtom;
 import net.swordie.ms.client.character.skills.info.ForceAtomInfo;
 import net.swordie.ms.client.character.skills.info.SkillInfo;
+import net.swordie.ms.client.character.skills.info.SkillUseInfo;
 import net.swordie.ms.client.character.skills.temp.CharacterTemporaryStat;
 import net.swordie.ms.client.character.skills.temp.TemporaryStatBase;
 import net.swordie.ms.client.character.skills.temp.TemporaryStatManager;
 import net.swordie.ms.client.guild.Guild;
 import net.swordie.ms.client.guild.GuildMember;
+import net.swordie.ms.client.jobs.JobManager;
 import net.swordie.ms.client.jobs.nova.Kaiser;
 import net.swordie.ms.client.party.Party;
 import net.swordie.ms.client.party.PartyMember;
@@ -272,6 +275,133 @@ public class AdminCommands {
             return Short.parseShort(slotArg.substring(1));
         }
         return Short.parseShort(slotArg);
+    }
+
+    private static Set<Short> getAllSkillRootsForJob(short job) {
+        Set<Short> jobs = new LinkedHashSet<>();
+        JobConstants.JobEnum jobEnum = JobConstants.JobEnum.getJobById(job);
+        if (jobEnum != null && jobEnum.getBeginnerJobId() != 0) {
+            jobs.add(jobEnum.getBeginnerJobId());
+        }
+        if (JobConstants.isEvan(job)) {
+            jobs.add((short) 2000);
+            jobs.add((short) 2200);
+            short curJob = job;
+            while (curJob >= 2210) {
+                jobs.add(curJob--);
+            }
+            return jobs;
+        }
+        if (JobConstants.isZero(job)) {
+            jobs.add((short) JobConstants.JobEnum.ZERO.getJobId());
+            if (job >= JobConstants.JobEnum.ZERO_1.getJobId()) {
+                jobs.add((short) JobConstants.JobEnum.ZERO_1.getJobId());
+            }
+            if (job >= JobConstants.JobEnum.ZERO_2.getJobId()) {
+                jobs.add((short) JobConstants.JobEnum.ZERO_2.getJobId());
+            }
+            if (job >= JobConstants.JobEnum.ZERO_3.getJobId()) {
+                jobs.add((short) JobConstants.JobEnum.ZERO_3.getJobId());
+            }
+            if (job >= JobConstants.JobEnum.ZERO_4.getJobId()) {
+                jobs.add((short) JobConstants.JobEnum.ZERO_4.getJobId());
+            }
+            return jobs;
+        }
+        if (job % 100 == 12 || job % 100 == 22 || job % 100 == 32 || job % 100 == 42) {
+            jobs.add(job);
+            jobs.add((short) (job - 1));
+            jobs.add((short) (job - 2));
+            jobs.add((short) ((job / 100) * 100));
+        } else if (job % 100 == 11 || job % 100 == 21 || job % 100 == 31 || job % 100 == 41) {
+            jobs.add(job);
+            jobs.add((short) (job - 1));
+            jobs.add((short) ((job / 100) * 100));
+        } else if (job % 100 == 10 || job % 100 == 20 || job % 100 == 30 || job % 100 == 40) {
+            jobs.add(job);
+            jobs.add((short) ((job / 100) * 100));
+        } else {
+            jobs.add(job);
+        }
+        return jobs;
+    }
+
+    private static int grantAllJobSkills(Char chr) {
+        List<Skill> updatedSkills = new ArrayList<>();
+        for (short jobRoot : getAllSkillRootsForJob(chr.getJob())) {
+            for (Skill skill : SkillData.getSkillsByJob(jobRoot)) {
+                int maxLevel = Math.max(skill.getMaxLevel(), 1);
+                skill.setCurrentLevel(maxLevel);
+                skill.setMasterLevel(maxLevel);
+                chr.addSkill(skill);
+                updatedSkills.add(skill);
+            }
+        }
+        if (!updatedSkills.isEmpty()) {
+            chr.write(WvsContext.changeSkillRecordResult(updatedSkills, true, false, false, false));
+        }
+        return updatedSkills.size();
+    }
+
+    private static int grantAllVisibleSkills(Char chr) {
+        List<Skill> updatedSkills = new ArrayList<>();
+        for (Map.Entry<Integer, SkillInfo> entry : SkillData.getSkillInfos().entrySet()) {
+            SkillInfo skillInfo = entry.getValue();
+            if (SkillConstants.isInvisible(skillInfo)) {
+                continue;
+            }
+            Skill skill = SkillData.getSkillDeepCopyById(entry.getKey());
+            if (skill == null) {
+                continue;
+            }
+            int level = Math.max(Math.max(skill.getMaxLevel(), skillInfo.getMasterLevel()), Math.max(skillInfo.getFixLevel(), 1));
+            skill.setCurrentLevel(level);
+            skill.setMasterLevel(level);
+            chr.addSkill(skill);
+            updatedSkills.add(skill);
+        }
+        if (!updatedSkills.isEmpty()) {
+            chr.write(WvsContext.changeSkillRecordResult(updatedSkills, true, false, false, false));
+        }
+        return updatedSkills.size();
+    }
+
+    private static int getMaxUsableSkillLevel(int skillId) {
+        Skill skill = SkillData.getSkillDeepCopyById(skillId);
+        SkillInfo skillInfo = SkillData.getSkillInfoById(skillId);
+        if (skill == null || skillInfo == null) {
+            return 0;
+        }
+        return Math.max(Math.max(skill.getMaxLevel(), skillInfo.getMasterLevel()), Math.max(skillInfo.getFixLevel(), 1));
+    }
+
+    private static boolean ensureSkillAtMaxLevel(Char chr, int skillId) {
+        int level = getMaxUsableSkillLevel(skillId);
+        if (level <= 0) {
+            return false;
+        }
+        if (!chr.hasSkill(skillId) || chr.getSkillLevel(skillId) < level) {
+            chr.addSkill(skillId, level, level);
+        }
+        return true;
+    }
+
+    private static boolean useAdminSkill(Char chr, int skillId) {
+        if (!ensureSkillAtMaxLevel(chr, skillId)) {
+            return false;
+        }
+        int slv = chr.getSkillLevel(skillId);
+        if (!SkillConstants.isNoEncodeSkillEffect(skillId)) {
+            Effect effect = Effect.skillUse(skillId, chr.getLevel(), slv, 0);
+            chr.write(UserPacket.effect(effect));
+            chr.getField().broadcastPacket(UserRemote.effect(chr.getId(), effect), chr);
+        }
+        net.swordie.ms.client.jobs.Job sourceJobHandler = JobManager.getJobById(SkillConstants.getSkillRootFromSkill(skillId), chr);
+        if (sourceJobHandler == null) {
+            sourceJobHandler = chr.getJobHandler();
+        }
+        sourceJobHandler.handleSkill(chr, chr.getTemporaryStatManager(), skillId, slv, null, new SkillUseInfo());
+        return true;
     }
 
     private static void completeQuestSet(Char chr, Set<Integer> questIds) {
@@ -1523,6 +1653,7 @@ public class AdminCommands {
         private static final Set<String> SEARCH_TRADE_FLAGS = Set.of(
                 "-trade", "-untrade", "-transfer"
         );
+        private static final String SEARCH_LEVEL_FLAG = "-lvl";
 
         public static void execute(Char chr, String[] args) {
             if (args.length <= 1) {
@@ -1533,12 +1664,36 @@ public class AdminCommands {
             var excludeTerms = new ArrayList<String>();
             String itemCategory = "";
             String tradeFilter = "";
+            String levelFilterMode = "";
+            Integer levelFilterValue = null;
             for (int i = 1; i < args.length; i++) {
                 var term = args[i] == null ? "" : args[i].trim();
                 if (term.isEmpty()) {
                     continue;
                 }
                 String lowerTerm = term.toLowerCase();
+                if (SEARCH_LEVEL_FLAG.equals(lowerTerm)) {
+                    if (i + 1 >= args.length) {
+                        chr.chatMessage("Usage: !s <query> ... -lvl <120|+120|-120>");
+                        return;
+                    }
+                    String levelArg = args[++i] == null ? "" : args[i].trim();
+                    if (!levelArg.matches("[+-]?\\d+")) {
+                        chr.chatMessage("Invalid -lvl value. Use 120, +120, or -120.");
+                        return;
+                    }
+                    if (levelArg.startsWith("+")) {
+                        levelFilterMode = "min";
+                        levelFilterValue = Integer.parseInt(levelArg.substring(1));
+                    } else if (levelArg.startsWith("-")) {
+                        levelFilterMode = "max";
+                        levelFilterValue = Integer.parseInt(levelArg.substring(1));
+                    } else {
+                        levelFilterMode = "exact";
+                        levelFilterValue = Integer.parseInt(levelArg);
+                    }
+                    continue;
+                }
                 if (SEARCH_CATEGORY_FLAGS.contains(lowerTerm)) {
                     itemCategory = lowerTerm.equals("-equips") ? "equip" : lowerTerm.substring(1);
                     continue;
@@ -1558,6 +1713,8 @@ public class AdminCommands {
             customBindings.put("exclude_queries", excludeTerms);
             customBindings.put("item_category", itemCategory);
             customBindings.put("trade_filter", tradeFilter);
+            customBindings.put("level_filter_mode", levelFilterMode);
+            customBindings.put("level_filter_value", levelFilterValue);
             chr.getScriptManager().startScript(0, "admin_item_search", ScriptType.Npc, customBindings);
         }
     }
@@ -2011,45 +2168,34 @@ public class AdminCommands {
     @Command(names = {"maxskills"}, requiredType = Tester)
     public static class MaxSkills extends AdminCommand {
         public static void execute(Char chr, String[] args) {
-            List<Skill> list = new ArrayList<>();
-            Set<Short> jobs = new HashSet<>();
-            short job = chr.getJob();
-            // giant hack, but it's for a command, so it's k
-            if (JobConstants.isEvan(job)) {
-                jobs.add((short) 2000);
-                jobs.add((short) 2200);
-                while (job >= 2210) {
-                    jobs.add(job--);
+            grantAllJobSkills(chr);
+        }
+    }
+
+    @Command(names = {"giveallskills"}, requiredType = Admin)
+    public static class GiveAllSkills extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            int grantedSkills = grantAllVisibleSkills(chr);
+            grantAdminVNodes(chr);
+            chr.chatMessage(String.format("Granted %d visible skills at max level, plus V skills.", grantedSkills));
+        }
+    }
+
+    @Command(names = {"useskill"}, requiredType = Admin)
+    public static class UseSkill extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            if (args.length >= 2) {
+                int skillId = Integer.parseInt(args[1]);
+                if (!useAdminSkill(chr, skillId)) {
+                    chr.chatMessage("Could not use that skill.");
+                    return;
                 }
-            } else {
-                if (job % 100 == 12 || job % 100 == 22 || job % 100 == 32 || job % 100 == 42) {
-                    jobs.add(job);
-                    jobs.add((short) (job - 1));
-                    jobs.add((short) (job - 2));
-                    jobs.add((short) ((job / 100) * 100));
-                } else if (job % 100 == 11 || job % 100 == 21 || job % 100 == 31 || job % 100 == 41) {
-                    jobs.add(job);
-                    jobs.add((short) (job - 1));
-                    jobs.add((short) ((job / 100) * 100));
-                } else if (job % 100 == 10 || job % 100 == 20 || job % 100 == 30 || job % 100 == 40) {
-                    jobs.add(job);
-                    jobs.add((short) ((job / 100) * 100));
-                } else {
-                    jobs.add(job);
-                }
+                chr.chatMessage(String.format("Used skill %d.", skillId));
+                return;
             }
-            for (short j : jobs) {
-                for (Skill skill : SkillData.getSkillsByJob(j)) {
-                    byte maxLevel = (byte) skill.getMaxLevel();
-                    skill.setCurrentLevel(maxLevel);
-                    skill.setMasterLevel(maxLevel);
-                    list.add(skill);
-                    chr.addSkill(skill);
-                }
-                if (list.size() > 0) {
-                    chr.write(WvsContext.changeSkillRecordResult(list, true, false, false, false));
-                }
-            }
+            Map<String, Object> props = new HashMap<>();
+            props.put("session", new AdminSkillSession());
+            chr.getScriptManager().startScript(0, "admin_skill_picker", ScriptType.Npc, props);
         }
     }
 

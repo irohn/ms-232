@@ -77,6 +77,7 @@ public class JobManager {
 
             BeastTamer.class,
             Beginner.class,
+            GM.class,
             Kinesis.class,
             PinkBean.class,
 

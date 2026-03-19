@@ -5,6 +5,7 @@ from net.swordie.ms.constants import ItemConstants
 MAX_RESULTS = 100
 VALID_CATEGORIES = {"equip", "equips", "use", "etc", "setup", "cash", "dec"}
 VALID_TRADE_FILTERS = {"trade", "untrade", "transfer"}
+VALID_LEVEL_FILTER_MODES = {"exact", "min", "max"}
 
 
 def _safe_trim(text):
@@ -70,12 +71,35 @@ def _matches_trade_filter(item_id, trade_filter):
     return True
 
 
-def _build_display_query(query, category, trade_filter, exclude_terms):
+def _matches_level_filter(item_id, level_filter_mode, level_filter_value):
+    if level_filter_mode == "" or level_filter_value is None:
+        return True
+    equip_info = ItemData.getEquipInfoById(item_id)
+    if equip_info is None:
+        return False
+    req_level = int(equip_info.getrLevel())
+    if level_filter_mode == "exact":
+        return req_level == level_filter_value
+    if level_filter_mode == "min":
+        return req_level >= level_filter_value
+    if level_filter_mode == "max":
+        return req_level <= level_filter_value
+    return True
+
+
+def _build_display_query(query, category, trade_filter, exclude_terms, level_filter_mode, level_filter_value):
     display_query = query
     if category != "":
         display_query += " -" + category
     if trade_filter != "":
         display_query += " -" + trade_filter
+    if level_filter_mode != "" and level_filter_value is not None:
+        level_prefix = ""
+        if level_filter_mode == "min":
+            level_prefix = "+"
+        elif level_filter_mode == "max":
+            level_prefix = "-"
+        display_query += " -lvl " + level_prefix + str(level_filter_value)
     for ex in exclude_terms:
         display_query += " !" + ex
     return display_query
@@ -87,12 +111,21 @@ exclude_terms = _to_lower_list(
 )
 category = _safe_trim(item_category if "item_category" in globals() else "").lower()
 selected_trade_filter = _safe_trim(globals()["trade_filter"] if "trade_filter" in globals() else "").lower()
+selected_level_filter_mode = _safe_trim(globals()["level_filter_mode"] if "level_filter_mode" in globals() else "").lower()
+selected_level_filter_value = globals()["level_filter_value"] if "level_filter_value" in globals() else None
 if category == "equips":
     category = "equip"
 if category not in VALID_CATEGORIES:
     category = ""
 if selected_trade_filter not in VALID_TRADE_FILTERS:
     selected_trade_filter = ""
+if selected_level_filter_mode not in VALID_LEVEL_FILTER_MODES:
+    selected_level_filter_mode = ""
+try:
+    if selected_level_filter_value is not None:
+        selected_level_filter_value = int(selected_level_filter_value)
+except Exception:
+    selected_level_filter_value = None
 
 if query == "" and len(exclude_terms) == 0:
     query = _safe_trim(sm.sendAskText("Search items by name:", "", 1, 40))
@@ -124,17 +157,33 @@ else:
                 continue
             if not _matches_trade_filter(iid, selected_trade_filter):
                 continue
+            if not _matches_level_filter(iid, selected_level_filter_mode, selected_level_filter_value):
+                continue
             results.append((iid, item_name))
 
         if len(results) == 0:
-            display_query = _build_display_query(query, category, selected_trade_filter, exclude_terms)
+            display_query = _build_display_query(
+                query,
+                category,
+                selected_trade_filter,
+                exclude_terms,
+                selected_level_filter_mode,
+                selected_level_filter_value,
+            )
             sm.sendSayOkay("No valid items were found for '#b" + display_query + "#k'.")
         else:
             results = sorted(results, key=lambda it: (it[1].lower(), it[0]))
             if len(results) > MAX_RESULTS:
                 results = results[:MAX_RESULTS]
 
-            display_query = _build_display_query(query, category, selected_trade_filter, exclude_terms)
+            display_query = _build_display_query(
+                query,
+                category,
+                selected_trade_filter,
+                exclude_terms,
+                selected_level_filter_mode,
+                selected_level_filter_value,
+            )
             msg = (
                 "Search results for '#b"
                 + display_query

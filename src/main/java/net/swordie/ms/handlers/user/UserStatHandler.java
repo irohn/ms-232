@@ -55,6 +55,7 @@ public class UserStatHandler {
         Map<Stat, Object> stats;
         int rootId = skill.getRootId();
         boolean beginnerJob = JobConstants.isBeginnerJob((short) rootId);
+        boolean gmJob = JobConstants.isGmJob(chr.getJob());
 
         if ((!beginnerJob && !SkillConstants.isValidSkillForJobAndJobLevel(skillID, chr.getJob(), jobLevel))
                 || beginnerJob && !JobConstants.isMatchingForBeginnerjob(chr.getJob(), rootId)
@@ -95,12 +96,33 @@ public class UserStatHandler {
                     extraSkill.setCurrentLevel(newLevel);
                 }
             }
+        } else if (gmJob) {
+            stats = new HashMap<>();
+            int curLevel = curSkill == null ? 0 : curSkill.getCurrentLevel();
+            int max = curSkill == null ? skill.getMaxLevel() : curSkill.getMaxLevel();
+            if (max <= 0) {
+                max = 1;
+            }
+            int newLevel = Math.min(curLevel + amount, max);
+            skill.setCurrentLevel(newLevel);
+            skill.setMasterLevel(Math.max(skill.getMasterLevel(), max));
+            for (int extraLvSkill : SkillConstants.getAutoLevelSkillsBySkillID(skillID)) {
+                Skill extraSkill = chr.getSkill(extraLvSkill, true);
+                if (extraSkill == null) {
+                    continue;
+                }
+                extraSkill.setCurrentLevel(newLevel);
+                extraSkill.setMasterLevel(Math.max(extraSkill.getMasterLevel(), max));
+            }
         } else if (JobConstants.isExtendSpJob(chr.getJob())) {
             ExtendSP esp = chr.getAvatarData().getCharacterStat().getExtendSP();
             int currentSp = esp.getSpByJobLevel(jobLevel);
             if (currentSp >= amount) {
                 int curLevel = curSkill == null ? 0 : curSkill.getCurrentLevel();
                 int max = curSkill == null ? skill.getMaxLevel() : curSkill.getMaxLevel();
+                if (max <= 0) {
+                    max = 1;
+                }
                 var newLevel = curLevel + amount > max ? max : curLevel + amount;
                 skill.setCurrentLevel(newLevel);
                 for (int extraLvSkill : SkillConstants.getAutoLevelSkillsBySkillID(skillID)) {
@@ -124,6 +146,9 @@ public class UserStatHandler {
             if (currentSp >= amount) {
                 int curLevel = curSkill == null ? 0 : curSkill.getCurrentLevel();
                 int max = curSkill == null ? skill.getMaxLevel() : curSkill.getMaxLevel();
+                if (max <= 0) {
+                    max = 1;
+                }
                 var newLevel = curLevel + amount > max ? max : curLevel + amount;
                 skill.setCurrentLevel(newLevel);
                 for (int extraLvSkill : SkillConstants.getAutoLevelSkillsBySkillID(skillID)) {
