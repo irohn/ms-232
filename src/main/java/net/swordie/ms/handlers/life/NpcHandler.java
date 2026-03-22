@@ -2,6 +2,7 @@ package net.swordie.ms.handlers.life;
 
 import net.swordie.ms.client.Client;
 import net.swordie.ms.client.character.Char;
+import net.swordie.ms.client.character.commands.AdminCommands;
 import net.swordie.ms.client.character.items.Equip;
 import net.swordie.ms.client.character.items.Item;
 import net.swordie.ms.client.character.quest.Quest;
@@ -68,6 +69,11 @@ public class NpcHandler {
             return;
         }
         String script = npc.getScripts().get(0);
+        if (templateID == 9201450) {
+            chr.getScriptManager().stop(ScriptType.Npc);
+            AdminCommands.openEnhanceShop(chr);
+            return;
+        }
         if (npc.isShop()) {
             NpcShopDlg nsd = NpcData.getShopById(templateID);
             if (nsd != null && !nsd.getItems().isEmpty()) {

@@ -9,12 +9,15 @@ import net.swordie.ms.client.character.FirstEnterReward;
 import net.swordie.ms.client.character.familiar.AdminFamiliarPotentialPickerSession;
 import net.swordie.ms.client.character.familiar.FamiliarCodexUpdateMask;
 import net.swordie.ms.client.character.items.AdminFlamePickerSession;
+import net.swordie.ms.client.character.items.AdminInnerAbilitySession;
 import net.swordie.ms.client.character.items.AdminOzRingSession;
 import net.swordie.ms.client.character.items.AdminPotentialPickerSession;
 import net.swordie.ms.client.character.items.AdminSetEquipSession;
 import net.swordie.ms.client.character.items.AdminSkillSession;
 import net.swordie.ms.client.character.items.AdminSoulWeaponSession;
+import net.swordie.ms.client.character.items.AdminVSkillSession;
 import net.swordie.ms.client.character.items.Equip;
+import net.swordie.ms.client.character.items.EquipSpecialAttribute;
 import net.swordie.ms.client.character.items.Item;
 import net.swordie.ms.client.character.items.ItemOption;
 import net.swordie.ms.client.character.quest.Quest;
@@ -149,6 +152,7 @@ public class AdminCommands {
             1142666, 1143008, 1142586, 1142573,
             1712001, 1712002, 1712003, 1712004, 1712005, 1712006,
             1713000, 1713001,
+            2702006,
             2630594, 1099015, 1092088, 1092089, 1092113,
             1672069, 1672082, 1672076,
             1662072, 1662073
@@ -158,8 +162,8 @@ public class AdminCommands {
             2615026, 2616057, 2613042, 2612043, 2616061, 2616062, 2613050, 2613051,
             2615031, 2615032, 2612061, 2612062, 2047409, 2047410,
             2470007, 2049047, 2049740, 2049784, 2049506, 2048331, 2049624, 4001832,
-            2049371, 2049376, 2644007, 2048767, 2048717, 2048716,
-            2590009, 2591123, 2591595
+            2049371, 2049376, 2644007, 2048767, 2048717, 2048716, 2630403,
+            2590009, 2591123, 2591595, 2702006
     };
     private static final int[][] ENHANCE_SHOP_ITEMS = {
             {2615026, 1_000_000_000}, {2616057, 1_000_000_000}, {2613042, 1_000_000_000}, {2612043, 1_000_000_000},
@@ -176,11 +180,13 @@ public class AdminCommands {
             {2049376, 2_000_000_000},
             {2048717, 25_000_000},
             {2048716, 9_500_000},
-            {5062009, 300_000_000},
-            {5062010, 500_000_000},
-            {5062500, 650_000_000},
-            {2711004, 250_000_000},
-            {2711003, 150_000_000}
+            {2630403, 2_000_000_000},
+            {2702006, 1_500_000_000},
+            {5062009, 120_000_000, 10},
+            {5062010, 220_000_000, 10},
+            {5062500, 240_000_000, 10},
+            {2711004, 100_000_000, 10},
+            {2711003, 50_000_000, 10}
     };
     private static final Pattern NON_ALNUM = Pattern.compile("[^a-z0-9]+");
 
@@ -189,11 +195,15 @@ public class AdminCommands {
     }
 
     private static NpcShopItem createMesoShopItem(int shopId, int itemId, int price) {
+        return createMesoShopItem(shopId, itemId, price, 1);
+    }
+
+    private static NpcShopItem createMesoShopItem(int shopId, int itemId, int price, int quantity) {
         NpcShopItem nsi = new NpcShopItem();
         nsi.setShopID(shopId);
         nsi.setItemID(itemId);
         nsi.setPrice(price);
-        nsi.setQuantity((short) 1);
+        nsi.setQuantity((short) quantity);
         nsi.setTabIndex(0);
         return nsi;
     }
@@ -218,7 +228,8 @@ public class AdminCommands {
         nsd.setNpcTemplateID(npcTemplateId);
         nsd.setShopVerNo(1);
         for (int[] itemPrice : itemPrices) {
-            nsd.addItem(createMesoShopItem(npcTemplateId, itemPrice[0], itemPrice[1]));
+            int quantity = itemPrice.length >= 3 ? itemPrice[2] : 1;
+            nsd.addItem(createMesoShopItem(npcTemplateId, itemPrice[0], itemPrice[1], quantity));
         }
         chr.setShop(nsd);
         chr.write(ShopDlg.openShop(chr, 0, nsd));
@@ -298,6 +309,245 @@ public class AdminCommands {
         equip.addStat(EquipBaseStat.tuc, hammersToApply);
         equip.updateToChar(chr);
         return true;
+    }
+
+    private static BaseStat parseEnhanceMainStat(String arg) {
+        if (arg == null) {
+            return null;
+        }
+        return switch (arg.toLowerCase(Locale.ENGLISH)) {
+            case "str" -> BaseStat.str;
+            case "dex" -> BaseStat.dex;
+            case "int" -> BaseStat.inte;
+            case "luk" -> BaseStat.luk;
+            case "hp", "maxhp", "mhp" -> BaseStat.mhp;
+            default -> null;
+        };
+    }
+
+    private static BaseStat getEnhanceDefaultMainStat(Char chr) {
+        BaseStat mainStat = JobConstants.getMainStatByJob(chr.getJob());
+        return mainStat != null ? mainStat : BaseStat.str;
+    }
+
+    private static BaseStat getEnhanceSecondaryStat(BaseStat mainStat) {
+        return switch (mainStat) {
+            case str, mhp -> BaseStat.dex;
+            case dex -> BaseStat.str;
+            case inte -> BaseStat.luk;
+            case luk -> BaseStat.dex;
+            default -> BaseStat.dex;
+        };
+    }
+
+    private static BaseStat getEnhanceOtherStat(BaseStat mainStat, BaseStat secondaryStat) {
+        for (BaseStat candidate : List.of(BaseStat.str, BaseStat.dex, BaseStat.inte, BaseStat.luk)) {
+            if (candidate != mainStat && candidate != secondaryStat) {
+                return candidate;
+            }
+        }
+        return BaseStat.str;
+    }
+
+    private static EquipBaseStat getEnhanceAttackEquipStat(BaseStat mainStat, String override) {
+        if (override != null) {
+            return override.equalsIgnoreCase("matt") ? EquipBaseStat.iMAD : EquipBaseStat.iPAD;
+        }
+        return mainStat == BaseStat.inte ? EquipBaseStat.iMAD : EquipBaseStat.iPAD;
+    }
+
+    private static BaseStat getEnhanceAttackRateStat(EquipBaseStat attackStat) {
+        return attackStat == EquipBaseStat.iMAD ? BaseStat.madR : BaseStat.padR;
+    }
+
+    private static boolean isEnhanceAccessoryLike(int itemId) {
+        return ItemConstants.isAccessory(itemId)
+                || ItemConstants.isRing(itemId)
+                || ItemConstants.isPendant(itemId)
+                || ItemConstants.isFaceAccessory(itemId)
+                || ItemConstants.isEyeAccessory(itemId)
+                || ItemConstants.isEarrings(itemId)
+                || ItemConstants.isShoulder(itemId);
+    }
+
+    private static void applyEnhanceScrolls(Char chr, Equip equip, boolean chaos, EquipBaseStat attackStat) {
+        applyMaxGoldenHammers(chr, equip);
+        int totalSlots = equip.getTuc();
+        if (totalSlots <= 0) {
+            return;
+        }
+        if (chaos) {
+            int totalChaos = 6 * totalSlots;
+            for (EquipBaseStat ebs : ScrollStat.getRandStats()) {
+                if ((int) equip.getBaseStat(ebs) > 0) {
+                    equip.addStat(ebs, totalChaos);
+                }
+            }
+        } else if (ItemConstants.isWeapon(equip.getItemId())) {
+            equip.addStat(attackStat, 12 * totalSlots);
+            equip.addStat(EquipBaseStat.iStr, 5 * totalSlots);
+            equip.addStat(EquipBaseStat.iDex, 5 * totalSlots);
+            equip.addStat(EquipBaseStat.iInt, 5 * totalSlots);
+            equip.addStat(EquipBaseStat.iLuk, 5 * totalSlots);
+        } else if (isEnhanceAccessoryLike(equip.getItemId()) || ItemConstants.isMechanicalHeart(equip.getItemId())) {
+            equip.addStat(attackStat, 7 * totalSlots);
+        } else {
+            equip.addStat(attackStat, 7 * totalSlots);
+        }
+        equip.setBaseStat(EquipBaseStat.cuc, totalSlots);
+        equip.setBaseStat(EquipBaseStat.tuc, 0);
+        equip.recalcEnchantmentStats();
+    }
+
+    private static void applyFlameChoice(Equip equip, FlameStat flameStat, short tier, int index) {
+        int addedStat = tier * equip.getFlameLevel();
+        int addedStatExtended = tier * equip.getFlameLevelExtended();
+        switch (flameStat) {
+            case STR -> equip.setfSTR(equip.getfSTR() + addedStatExtended);
+            case DEX -> equip.setfDEX(equip.getfDEX() + addedStatExtended);
+            case INT -> equip.setfINT(equip.getfINT() + addedStatExtended);
+            case LUK -> equip.setfLUK(equip.getfLUK() + addedStatExtended);
+            case STRDEX -> {
+                equip.setfSTR(equip.getfSTR() + addedStat);
+                equip.setfDEX(equip.getfDEX() + addedStat);
+            }
+            case STRINT -> {
+                equip.setfSTR(equip.getfSTR() + addedStat);
+                equip.setfINT(equip.getfINT() + addedStat);
+            }
+            case STRLUK -> {
+                equip.setfSTR(equip.getfSTR() + addedStat);
+                equip.setfLUK(equip.getfLUK() + addedStat);
+            }
+            case DEXINT -> {
+                equip.setfDEX(equip.getfDEX() + addedStat);
+                equip.setfINT(equip.getfINT() + addedStat);
+            }
+            case DEXLUK -> {
+                equip.setfDEX(equip.getfDEX() + addedStat);
+                equip.setfLUK(equip.getfLUK() + addedStat);
+            }
+            case INTLUK -> {
+                equip.setfINT(equip.getfINT() + addedStat);
+                equip.setfLUK(equip.getfLUK() + addedStat);
+            }
+            case Attack -> equip.setfATT(equip.getfATT() + equip.getATTBonus(tier));
+            case MagicAttack -> equip.setfMATT(equip.getfMATT() + equip.getATTBonus(tier));
+            case Defense -> equip.setfDEF(equip.getfDEF() + addedStatExtended);
+            case MaxHP -> equip.setfHP(equip.getfHP() + ((equip.getReqLevel() + equip.getiIncReq()) / 10) * 30 * tier);
+            case MaxMP -> equip.setfMP(equip.getfMP() + ((equip.getReqLevel() + equip.getiIncReq()) / 10) * 30 * tier);
+            case Speed -> equip.setfSpeed(equip.getfSpeed() + tier);
+            case Jump -> equip.setfJump(equip.getfJump() + tier);
+            case AllStats -> equip.setfAllStat(equip.getfAllStat() + tier);
+            case BossDamage -> equip.setfBoss(equip.getfBoss() + tier * 2);
+            case Damage -> equip.setfDamage(equip.getfDamage() + tier);
+            case LevelReduction -> equip.setfLevel(equip.getfLevel() + (5 * tier));
+        }
+        equip.setExGradeOption(equip.getExGradeOption() + (long) (Math.pow(1000, index) * (tier + 10 * flameStat.getExGrade())));
+    }
+
+    private static FlameStat getPairFlameStat(BaseStat first, BaseStat second) {
+        if ((first == BaseStat.str && second == BaseStat.dex) || (first == BaseStat.dex && second == BaseStat.str)) {
+            return FlameStat.STRDEX;
+        }
+        if ((first == BaseStat.str && second == BaseStat.inte) || (first == BaseStat.inte && second == BaseStat.str)) {
+            return FlameStat.STRINT;
+        }
+        if ((first == BaseStat.str && second == BaseStat.luk) || (first == BaseStat.luk && second == BaseStat.str)) {
+            return FlameStat.STRLUK;
+        }
+        if ((first == BaseStat.dex && second == BaseStat.inte) || (first == BaseStat.inte && second == BaseStat.dex)) {
+            return FlameStat.DEXINT;
+        }
+        if ((first == BaseStat.dex && second == BaseStat.luk) || (first == BaseStat.luk && second == BaseStat.dex)) {
+            return FlameStat.DEXLUK;
+        }
+        return FlameStat.INTLUK;
+    }
+
+    private static FlameStat getSingleFlameStat(BaseStat stat) {
+        return switch (stat) {
+            case str -> FlameStat.STR;
+            case dex -> FlameStat.DEX;
+            case inte -> FlameStat.INT;
+            case luk -> FlameStat.LUK;
+            case mhp -> FlameStat.MaxHP;
+            default -> FlameStat.STR;
+        };
+    }
+
+    private static void applyEnhanceFlames(Equip equip, BaseStat mainStat, EquipBaseStat attackStat) {
+        if (!ItemConstants.canEquipHaveFlame(equip)) {
+            return;
+        }
+        equip.resetFlameStats();
+        equip.setExGradeOption(0);
+        if (mainStat == BaseStat.mhp) {
+            applyFlameChoice(equip, FlameStat.MaxHP, (short) 7, 0);
+            applyFlameChoice(equip, FlameStat.Attack, (short) 7, 1);
+            applyFlameChoice(equip, FlameStat.AllStats, (short) 7, 2);
+            applyFlameChoice(equip, FlameStat.STR, (short) 7, 3);
+            return;
+        }
+        if (ItemConstants.isWeapon(equip.getItemId())) {
+            applyFlameChoice(equip, attackStat == EquipBaseStat.iMAD ? FlameStat.MagicAttack : FlameStat.Attack, (short) 7, 0);
+            applyFlameChoice(equip, FlameStat.Damage, (short) 7, 1);
+            applyFlameChoice(equip, FlameStat.BossDamage, (short) 7, 2);
+            applyFlameChoice(equip, FlameStat.AllStats, (short) 7, 3);
+            return;
+        }
+        BaseStat secondaryStat = getEnhanceSecondaryStat(mainStat);
+        BaseStat otherStat = getEnhanceOtherStat(mainStat, secondaryStat);
+        applyFlameChoice(equip, FlameStat.AllStats, (short) 7, 0);
+        applyFlameChoice(equip, getSingleFlameStat(mainStat), (short) 7, 1);
+        applyFlameChoice(equip, getPairFlameStat(mainStat, secondaryStat), (short) 7, 2);
+        applyFlameChoice(equip, getPairFlameStat(mainStat, otherStat), (short) 7, 3);
+    }
+
+    private static Integer getBestPotentialOptionId(Equip equip, boolean bonus, BaseStat targetStat) {
+        int level = Math.max(1, (equip.getReqLevel() + equip.getiIncReq()) / 10);
+        return ItemConstants.getOptionsByEquip(equip, bonus, ItemGrade.Legendary).stream()
+                .filter(io -> io.getStatValuesByLevel(level).containsKey(targetStat))
+                .max(Comparator
+                        .comparingDouble((ItemOption io) -> io.getStatValuesByLevel(level).get(targetStat))
+                        .thenComparingInt(ItemOption::getId))
+                .map(ItemOption::getId)
+                .orElse(null);
+    }
+
+    private static void applyEnhancePotentials(Equip equip, BaseStat mainStat, EquipBaseStat attackStat) {
+        if (!ItemConstants.canEquipHavePotential(equip)) {
+            return;
+        }
+        BaseStat targetStat;
+        if (ItemConstants.isGlove(equip.getItemId())) {
+            targetStat = BaseStat.crDmg;
+        } else if (ItemConstants.isWeapon(equip.getItemId()) || ItemConstants.isSecondary(equip.getItemId()) || ItemConstants.isEmblem(equip.getItemId())) {
+            targetStat = getEnhanceAttackRateStat(attackStat);
+        } else if (mainStat == BaseStat.mhp) {
+            targetStat = BaseStat.mhpR;
+        } else {
+            targetStat = mainStat.getRateVar();
+        }
+        Integer baseOption = getBestPotentialOptionId(equip, false, targetStat);
+        Integer bonusOption = getBestPotentialOptionId(equip, true, targetStat);
+        if (baseOption != null) {
+            equip.setOptionBase(0, baseOption);
+            equip.setOptionBase(1, baseOption);
+            equip.setOptionBase(2, baseOption);
+        }
+        if (bonusOption != null) {
+            equip.setOptionBonus(0, bonusOption);
+            equip.setOptionBonus(1, bonusOption);
+            equip.setOptionBonus(2, bonusOption);
+        }
+    }
+
+    private static void applyEnhanceStarForce(Equip equip) {
+        if (!ItemConstants.isUpgradable(equip.getItemId()) || equip.hasSpecialAttribute(EquipSpecialAttribute.Vestige)) {
+            return;
+        }
+        equip.setChuc((short) GameConstants.getMaxStars(equip));
     }
 
     private static Set<Short> getAllSkillRootsForJob(short job) {
@@ -490,14 +740,6 @@ public class AdminCommands {
         chr.addMatrixRecord(mr);
     }
 
-    private static int getIconIdForSkill(List<VCoreInfo> infos, int skillId) {
-        return infos.stream()
-                .filter(info -> info.getSkillID() == skillId)
-                .map(VCoreInfo::getIconID)
-                .findFirst()
-                .orElse(0);
-    }
-
     private static void grantVSkillNodes(Char chr) {
         List<VCoreInfo> infos = VCoreData.getPossibilitiesByJob(chr.getJob());
         if (infos == null) {
@@ -510,47 +752,8 @@ public class AdminCommands {
                 .forEach(info -> addMaxedMatrixNode(chr, info.getIconID(), info.getSkillID()));
     }
 
-    private static void grantPerfectBoostNodes(Char chr) {
-        List<VCoreInfo> infos = VCoreData.getPossibilitiesByJob(chr.getJob());
-        if (infos == null) {
-            return;
-        }
-        List<VCoreInfo> enforceInfos = infos.stream()
-                .filter(VCoreInfo::isEnforce)
-                .collect(Collectors.toMap(VCoreInfo::getSkillID, info -> info, (left, right) -> left, LinkedHashMap::new))
-                .values()
-                .stream()
-                .collect(Collectors.toList());
-        if (enforceInfos.isEmpty()) {
-            return;
-        }
-
-        List<Integer> boostSkills = enforceInfos.stream()
-                .sorted(Comparator.comparing((VCoreInfo info) -> {
-                    SkillStringInfo ssi = StringData.getSkillStringById(info.getSkillID());
-                    return ssi != null ? normalizeNodeSkillName(ssi.getName()) : "";
-                }).thenComparingInt(VCoreInfo::getSkillID))
-                .map(VCoreInfo::getSkillID)
-                .collect(Collectors.toList());
-        if (boostSkills.size() < 3) {
-            return;
-        }
-
-        for (int i = 0; i < boostSkills.size(); i++) {
-            int mainSkillId = boostSkills.get(i);
-            int secondSkillId = boostSkills.get((i + 1) % boostSkills.size());
-            int thirdSkillId = boostSkills.get((i + 2) % boostSkills.size());
-            int iconId = getIconIdForSkill(enforceInfos, mainSkillId);
-            if (iconId == 0) {
-                continue;
-            }
-            addMaxedMatrixNode(chr, iconId, mainSkillId, secondSkillId, thirdSkillId);
-        }
-    }
-
     private static void grantAdminVNodes(Char chr) {
         grantVSkillNodes(chr);
-        grantPerfectBoostNodes(chr);
         chr.write(WvsContext.matrixUpdate(chr, false, 0, 0));
     }
 
@@ -558,6 +761,16 @@ public class AdminCommands {
         Map<String, Object> props = new HashMap<>();
         props.put("session", session);
         chr.getScriptManager().startScript(0, "admin_select_session", ScriptType.Npc, props);
+    }
+
+    public static boolean openAdminInnerAbilityPicker(Char chr, int consumeItemId) {
+        completeQuestIds(chr, 12394, 12396);
+        AdminInnerAbilitySession session = new AdminInnerAbilitySession(consumeItemId);
+        if (!session.isValid()) {
+            return false;
+        }
+        startAdminSelectionScript(chr, session);
+        return true;
     }
 
     @Command(names = {"test"}, requiredType = Admin)
@@ -614,6 +827,40 @@ public class AdminCommands {
 
         public static void execute(Char chr, String[] args) {
             chr.write(WvsContext.nodeOpenVmatrix(true));
+        }
+    }
+
+    @Command(names = {"vskill"}, requiredType = Tester)
+    public static class VSkillCommand extends AdminCommand {
+
+        public static void execute(Char chr, String[] args) {
+            if (!chr.getQuestManager().hasQuestCompleted(QuestConstants.FIFTH_JOB_QUEST)) {
+                chr.chatMessage("You must be 5th job to use !vskill.");
+                return;
+            }
+            List<VCoreInfo> infos = VCoreData.getPossibilitiesByJob(chr.getJob());
+            if (infos == null) {
+                chr.chatMessage("No V Matrix data exists for your current job.");
+                return;
+            }
+            AdminVSkillSession session = new AdminVSkillSession(infos.stream()
+                    .filter(VCoreInfo::isEnforce)
+                    .collect(Collectors.toList()));
+            if (!session.isValid()) {
+                chr.chatMessage("Your current job does not have enough boost node skills to build a trio.");
+                return;
+            }
+            startAdminSelectionScript(chr, session);
+        }
+    }
+
+    @Command(names = {"innerability", "ia"}, requiredType = Tester)
+    public static class InnerAbilityCommand extends AdminCommand {
+
+        public static void execute(Char chr, String[] args) {
+            if (!openAdminInnerAbilityPicker(chr, 0)) {
+                chr.chatMessage("No Legendary inner ability lines are available.");
+            }
         }
     }
 
@@ -3555,6 +3802,64 @@ public class AdminCommands {
                 return;
             }
             chr.chatMessage("Hammered [%d] %s", equip.getBagIndex(), StringData.getItemStringById(equip.getItemId()));
+        }
+    }
+
+    @Command(names = {"enhanceequips", "ee"}, requiredType = Tester)
+    public static class EnhanceEquips extends AdminCommand {
+        public static void execute(Char chr, String[] args) {
+            if (args.length < 3) {
+                chr.chatMessage("Usage: !enhanceequips <slot_id start> <slot_id end> [main stat] [chaos] [att/matt]");
+                return;
+            }
+            int start = Integer.parseInt(args[1]);
+            int end = Integer.parseInt(args[2]);
+            BaseStat mainStat = null;
+            boolean chaos = false;
+            String attackOverride = null;
+            for (int i = 3; i < args.length; i++) {
+                BaseStat parsedMainStat = parseEnhanceMainStat(args[i]);
+                if (parsedMainStat != null) {
+                    mainStat = parsedMainStat;
+                    continue;
+                }
+                if ("chaos".equalsIgnoreCase(args[i])) {
+                    chaos = true;
+                    continue;
+                }
+                if ("att".equalsIgnoreCase(args[i]) || "matt".equalsIgnoreCase(args[i])) {
+                    attackOverride = args[i].toLowerCase(Locale.ENGLISH);
+                    continue;
+                }
+                chr.chatMessage("Unknown option: " + args[i]);
+                return;
+            }
+            if (mainStat == null) {
+                mainStat = getEnhanceDefaultMainStat(chr);
+            }
+            EquipBaseStat attackStat = getEnhanceAttackEquipStat(mainStat, attackOverride);
+            int from = Math.min(start, end);
+            int to = Math.max(start, end);
+            int changed = 0;
+            for (int slot = from; slot <= to; slot++) {
+                Equip equip = getAdminEquipBySlot(chr, slot);
+                if (equip == null) {
+                    continue;
+                }
+                equip.resetStats();
+                applyEnhanceScrolls(chr, equip, chaos, attackStat);
+                applyEnhanceFlames(equip, mainStat, attackStat);
+                applyEnhancePotentials(equip, mainStat, attackStat);
+                applyEnhanceStarForce(equip);
+                equip.updateToChar(chr);
+                changed++;
+                chr.chatMessage("Enhanced [%d] %s", equip.getBagIndex(), StringData.getItemStringById(equip.getItemId()));
+            }
+            if (changed == 0) {
+                chr.chatMessage("No equips were found in that slot range.");
+                return;
+            }
+            chr.chatMessage("Enhanced %d equip(s).", changed);
         }
     }
 

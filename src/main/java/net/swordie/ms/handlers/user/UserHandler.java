@@ -21,6 +21,7 @@ import net.swordie.ms.client.character.runestones.RuneStoneAckType;
 import net.swordie.ms.client.character.skills.Option;
 import net.swordie.ms.client.character.skills.temp.CharacterTemporaryStat;
 import net.swordie.ms.client.character.skills.temp.TemporaryStatManager;
+import net.swordie.ms.client.character.commands.AdminCommands;
 import net.swordie.ms.client.jobs.Job;
 import net.swordie.ms.client.jobs.adventurer.BeastTamer;
 import net.swordie.ms.client.jobs.adventurer.thief.Shadower;
@@ -380,6 +381,27 @@ public class UserHandler {
             if (!lockedLines.contains((int) cp.getKey())) {
                 cpm.addPotential(cpm.generateRandomPotential(cp.getKey()));
             }
+        }
+    }
+
+    @Handler(op = InHeader.USER_ABILITY_CHANGE_UI_OPEN_REQUEST)
+    public static void handleUserAbilityChangeUiOpenRequest(Char chr, InPacket inPacket) {
+        int itemId = inPacket.decodeInt();
+        int slot = inPacket.decodeInt();
+        if (itemId != 2702006) {
+            chr.chatMessage(String.format("Unhandled ability UI item %d.", itemId));
+            chr.dispose();
+            return;
+        }
+        Item item = chr.getConsumeInventory().getItemBySlot(slot);
+        if (item == null || item.getItemId() != itemId) {
+            chr.chatMessage("Could not find the Legendary Circulator.");
+            chr.dispose();
+            return;
+        }
+        if (!AdminCommands.openAdminInnerAbilityPicker(chr, itemId)) {
+            chr.chatMessage("No Legendary inner ability lines are available.");
+            chr.dispose();
         }
     }
 
