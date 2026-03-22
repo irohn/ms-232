@@ -48,6 +48,7 @@ import net.swordie.ms.client.character.skills.info.ForceAtomInfo;
 import net.swordie.ms.client.character.skills.info.SkillInfo;
 import net.swordie.ms.client.character.skills.info.SkillUseInfo;
 import net.swordie.ms.client.character.skills.jupiterthunder.JupiterThunder;
+import net.swordie.ms.client.character.skills.temp.CharacterTemporaryStat;
 import net.swordie.ms.client.character.skills.temp.TemporaryStatManager;
 import net.swordie.ms.client.character.skills.vmatrix.MatrixRecord;
 import net.swordie.ms.client.character.skills.vmatrix.MatrixSlot;
@@ -129,6 +130,8 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static net.swordie.ms.client.character.skills.BypassCooldownCheckType.BypassCheck;
@@ -142,6 +145,9 @@ import static net.swordie.ms.enums.InventoryOperation.*;
  * Created on 11/17/2017.
  */
 public class Char {
+    // Use a real Combat Orders source id so the client treats the CTS as a valid skill bonus.
+    public static final int EQUIPPED_ALL_SKILL_SOURCE = 8004;
+    private static final Pattern BYPASS_KEY_NAME_PATTERN = Pattern.compile("^Lv\\.\\s*(\\d+)\\s+(Armor|Weapon|Accessory|ETC) Bypass Key$");
     private static final UserDao userDao = (UserDao) SworDaoFactory.getByClass(User.class);
     private static final FuncKeyMapDao funcKeyMapDao = (FuncKeyMapDao) SworDaoFactory.getByClass(FuncKeyMap.class);
     private static final ItemDao itemDao = (ItemDao) SworDaoFactory.getByClass(Item.class);
@@ -715,7 +721,8 @@ public class Char {
     }
 
     public int getCombatOrders() {
-        return combatOrders;
+        int equippedAllSkill = (int) getEquippedInventory().getBaseStat(BaseStat.incAllSkill);
+        return combatOrders != 0 ? combatOrders : equippedAllSkill;
     }
 
     public QuestManager getQuestManager() {
@@ -1244,9 +1251,86 @@ public class Char {
 
         Skill skill = getSkill(skillID);
         if (skill != null) {
-            return skill.getCurrentLevel();
+            return getAdjustedSkillLevel(skill);
         }
         return 0;
+    }
+
+    private int getAdjustedSkillLevel(Skill skill) {
+        int skillId = skill.getSkillId();
+        int currentLevel = skill.getCurrentLevel();
+        if (currentLevel <= 0 || !isAffectedByIncAllSkill(skillId)) {
+            return currentLevel;
+        }
+        int bonusLevels = getTotalStat(BaseStat.incAllSkill);
+        if (bonusLevels <= 0) {
+            return currentLevel;
+        }
+        SkillInfo skillInfo = SkillData.getSkillInfoById(skillId);
+        int maxLevel = Math.max(
+                Math.max(skill.getMaxLevel(), skill.getMasterLevel()),
+                skillInfo != null ? Math.max(skillInfo.getMaxLevel(), Math.max(skillInfo.getMasterLevel(), skillInfo.getFixLevel())) : 0
+        );
+        if (maxLevel <= 0) {
+            return currentLevel;
+        }
+        return Math.min(currentLevel + bonusLevels, maxLevel);
+    }
+
+    private boolean isAffectedByIncAllSkill(int skillId) {
+        if (skillId >= 100000000
+                || SkillConstants.isMakingSkillRecipe(skillId)
+                || SkillConstants.isUnionSkill(skillId)
+                || SkillConstants.isUnionMemberBonusSkill(skillId)
+                || SkillConstants.isUnionGridBonusSkill(skillId)
+                || SkillConstants.isFieldAttackObjSkill(skillId)) {
+            return false;
+        }
+        int rootId = SkillConstants.getSkillRootFromSkill(skillId);
+        if (JobConstants.isBeginnerJob(rootId) || (rootId >= 800000 && rootId < 800100)) {
+            return false;
+        }
+        return JobConstants.getJobLevel(rootId) > 0;
+    }
+
+    public void refreshEquippedSkillBonuses() {
+        List<Skill> updatedSkills = new ArrayList<>();
+        for (Skill skill : getSkills()) {
+            if (skill == null || skill.getCurrentLevel() <= 0 || !isAffectedByIncAllSkill(skill.getSkillId())) {
+                continue;
+            }
+            Skill updatedSkill = SkillData.getSkillDeepCopy(skill);
+            if (updatedSkill == null) {
+                continue;
+            }
+            updatedSkill.setMasterLevel(skill.getMasterLevel());
+            updatedSkill.setCurrentLevel(getAdjustedSkillLevel(skill));
+            updatedSkills.add(updatedSkill);
+        }
+        if (!updatedSkills.isEmpty()) {
+            write(WvsContext.changeSkillRecordResult(updatedSkills, true, false, false, false));
+        }
+    }
+
+    public void syncEquippedAllSkillCTS() {
+        var tsm = getTemporaryStatManager();
+        int equippedAllSkill = (int) getEquippedInventory().getBaseStat(BaseStat.incAllSkill);
+        Option existing = tsm.getOptByCTSAndSkill(CharacterTemporaryStat.CombatOrders, EQUIPPED_ALL_SKILL_SOURCE);
+        if (equippedAllSkill <= 0) {
+            if (existing != null) {
+                tsm.removeStatByCTSAndSkill(CharacterTemporaryStat.CombatOrders, EQUIPPED_ALL_SKILL_SOURCE);
+            }
+            return;
+        }
+        if (existing != null && existing.nOption == equippedAllSkill) {
+            return;
+        }
+        Option option = new Option();
+        option.nOption = equippedAllSkill;
+        option.rOption = EQUIPPED_ALL_SKILL_SOURCE;
+        option.tOption = Integer.MAX_VALUE;
+        tsm.putCharacterStatValue(CharacterTemporaryStat.CombatOrders, option, true);
+        tsm.sendSetStatPacket();
     }
 
     /**
@@ -5912,8 +5996,7 @@ public class Char {
      * @return whether or not this Char has the skill with the given skill level
      */
     public boolean hasSkillWithSlv(int skillID, short slv) {
-        Skill skill = getSkill(skillID);
-        return skill != null && skill.getCurrentLevel() >= slv;
+        return getSkillLevel(skillID) >= slv;
     }
 
     public Set<Friend> getOnlineFriends() {
@@ -6464,7 +6547,8 @@ public class Char {
 
     public boolean canEquip(Item item) {
         if (item instanceof Equip && !((Equip) item).isVestige()) {
-            var info = ((Equip) item).getInfo();
+            var equip = (Equip) item;
+            var info = equip.getInfo();
             int lv = getLevel();
             CharacterStat cs = getAvatarData().getCharacterStat();
             int str = cs.getStr();
@@ -6486,13 +6570,82 @@ public class Char {
                         (!thief || JobConstants.isThiefEquipJob(job)) &&
                         (!pirate || JobConstants.isPirateEquipJob(job));
             }
-            return info.getrLevel() <= lv
+            int bypassKeyReduction = getBypassKeyReduction(equip);
+            return equip.getRequiredLevel() <= lv + bypassKeyReduction
                     && info.getrDex() <= dex
                     && (info.getrStr() <= str || JobConstants.isDemonAvenger(job))
                     && info.getrInt() <= inte
                     && info.getrLuk() <= luk && matchingJob;
         }
         return false;
+    }
+
+    public void activateBypassKey(int itemId) {
+        var bypassKeyInfo = getBypassKeyInfo(itemId);
+        if (bypassKeyInfo == null) {
+            return;
+        }
+        var quest = getQuestManager().getOrCreateQuestById(QuestConstants.BYPASS_KEY_STATE);
+        quest.setPropertyEx(bypassKeyInfo.propertyKey + "Value", bypassKeyInfo.levelReduction);
+        quest.setPropertyEx(bypassKeyInfo.propertyKey + "Expiry", System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
+        write(WvsContext.message(MessagePacket.questRecordExMessage(quest)));
+    }
+
+    public int getBypassKeyReduction(Equip equip) {
+        var propertyKey = getBypassKeyPropertyKey(equip.getItemId());
+        if (propertyKey == null) {
+            return 0;
+        }
+        var quest = getQuestManager().getQuestById(QuestConstants.BYPASS_KEY_STATE);
+        if (quest == null) {
+            return 0;
+        }
+        long expireTime = quest.getLongPropertyEx(propertyKey + "Expiry");
+        if (expireTime <= System.currentTimeMillis()) {
+            if (expireTime > 0) {
+                quest.setPropertyEx(propertyKey + "Value", 0);
+                quest.setPropertyEx(propertyKey + "Expiry", 0);
+            }
+            return 0;
+        }
+        return quest.getIntPropertyEx(propertyKey + "Value");
+    }
+
+    private static String getBypassKeyPropertyKey(int equipItemId) {
+        if (ItemConstants.isWeapon(equipItemId)) {
+            return "weapon";
+        }
+        if (ItemConstants.isAccessory(equipItemId) || ItemConstants.isShoulder(equipItemId)) {
+            return "accessory";
+        }
+        if (ItemConstants.isHat(equipItemId) || ItemConstants.isTop(equipItemId) || ItemConstants.isOverall(equipItemId)
+                || ItemConstants.isBottom(equipItemId) || ItemConstants.isShoe(equipItemId)
+                || ItemConstants.isGlove(equipItemId) || ItemConstants.isCape(equipItemId)) {
+            return "armor";
+        }
+        return "etc";
+    }
+
+    private static BypassKeyInfo getBypassKeyInfo(int itemId) {
+        String itemName = StringData.getItemStringById(itemId);
+        if (itemName == null) {
+            return null;
+        }
+        Matcher matcher = BYPASS_KEY_NAME_PATTERN.matcher(itemName);
+        if (!matcher.matches()) {
+            return null;
+        }
+        return new BypassKeyInfo(Integer.parseInt(matcher.group(1)), matcher.group(2).toLowerCase(Locale.ENGLISH));
+    }
+
+    private static final class BypassKeyInfo {
+        private final int levelReduction;
+        private final String propertyKey;
+
+        private BypassKeyInfo(int levelReduction, String propertyKey) {
+            this.levelReduction = levelReduction;
+            this.propertyKey = propertyKey;
+        }
     }
 
     public Char createCopy() {

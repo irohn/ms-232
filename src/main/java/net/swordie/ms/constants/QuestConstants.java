@@ -31,6 +31,7 @@ public class QuestConstants {
     public static final int SW_CUSTOM_EFFECT = 999_999; // NoEffect=1 -> disabled | anything else -> enabled
     public static final int SW_PHANTOM_LOADOUT_PRESET = 999_998; // NoEffect=1 -> disabled | anything else -> enabled
     public static final int SW_DEMON_SLAYER_DF_ORBS = 999_997; // NoEffect=1 -> disabled | anything else -> enabled
+    public static final int BYPASS_KEY_STATE = 999_996; // armorValue=X;armorExpiry=Y;weaponValue=Z;...
 
     // Dojo
     public static final int DOJO_FLOOR_REACHED = 100466; // Floor=X

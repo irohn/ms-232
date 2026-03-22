@@ -105,6 +105,10 @@ public class ItemHandler {
         }
         else if (itemId == 5060000 || itemId == 5060010) { // Item Tag || Item Tag Clear
             ItemHandlerModule.handleItemTag(chr, inPacket, item);
+        } else if (isBypassKey(itemId)) {
+            chr.activateBypassKey(itemId);
+            chr.consumeItem(item);
+            chr.chatMessage(SystemNotice, String.format("%s is now active for 30 days.", StringData.getItemStringById(itemId)));
         } else {
             Equip medal = (Equip) chr.getEquippedInventory().getFirstItemByBodyPart(BodyPart.Medal);
             int medalInt = 0;
@@ -202,6 +206,11 @@ public class ItemHandler {
             }
         }
         chr.dispose();
+    }
+
+    private static boolean isBypassKey(int itemId) {
+        String itemName = StringData.getItemStringById(itemId);
+        return itemName != null && itemName.endsWith("Bypass Key");
     }
 
     @Handler(op = InHeader.USER_FREE_MIRACLE_CUBE_ITEM_USE_REQUEST)

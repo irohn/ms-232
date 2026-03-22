@@ -342,6 +342,8 @@ public class Inventory {
         applyCustomEquipBonuses();
 
         applySets(setCount, jokerItems);
+        chr.syncEquippedAllSkillCTS();
+        chr.refreshEquippedSkillBonuses();
     }
 
     private void applyCustomEquipBonuses() {

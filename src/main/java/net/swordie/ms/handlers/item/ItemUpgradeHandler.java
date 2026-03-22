@@ -15,6 +15,7 @@ import net.swordie.ms.enums.*;
 import net.swordie.ms.handlers.Handler;
 import net.swordie.ms.handlers.header.InHeader;
 import net.swordie.ms.loaders.ItemData;
+import net.swordie.ms.loaders.StringData;
 import net.swordie.ms.util.Util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -145,9 +146,16 @@ public class ItemUpgradeHandler {
             case 2048829:
                 equip.addStat(iPAD, rollWeightedStat(5, 6, 7, maximize));
                 return;
+            case 2048818:
+            case 2048819:
+                if (isMagicAttackPetEquipXScroll(scrollID)) {
+                    equip.addStat(iMAD, rollWeightedStat(5, 6, 7, maximize));
+                } else {
+                    equip.addStat(iPAD, rollWeightedStat(5, 6, 7, maximize));
+                }
+                return;
             case 2615032:
             case 2616062:
-            case 2048819:
                 equip.addStat(iMAD, rollWeightedStat(5, 6, 7, maximize));
                 return;
             case 2047409:
@@ -199,6 +207,16 @@ public class ItemUpgradeHandler {
             default:
                 return;
         }
+    }
+
+    private static boolean isMagicAttackPetEquipXScroll(int scrollID) {
+        var itemName = StringData.getItemStringById(scrollID);
+        if (itemName == null) {
+            return false;
+        }
+        var upperName = itemName.toUpperCase();
+        return upperName.contains("PET EQUIP") && upperName.contains("X")
+                && (upperName.contains("MAGIC ATT") || upperName.contains("M. ATT"));
     }
 
 

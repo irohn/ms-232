@@ -280,6 +280,11 @@ public class InventoryHandler {
         if (!canEquip(chr, item, newPos)) {
             return true;
         }
+        if (!chr.canEquip(item)) {
+            chr.chatMessage("You need more levels or stats to equip that item.");
+            chr.dispose();
+            return true;
+        }
 
         if (swapItem != null) {
             chr.unequip(swapItem, true);
@@ -292,6 +297,11 @@ public class InventoryHandler {
     private static boolean equipFromEquippedToEquip(Char chr, short oldPos, InvType invTypeTo, Item item, Item swapItem) {
         if (invTypeTo.isEquipType() && swapItem != null) {
             if (!canEquip(chr, swapItem, oldPos)) {
+                return true;
+            }
+            if (!chr.canEquip(swapItem)) {
+                chr.chatMessage("You need more levels or stats to equip that item.");
+                chr.dispose();
                 return true;
             }
 

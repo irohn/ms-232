@@ -113,10 +113,6 @@ public class TemporaryStatManager {
             option.tOption = (int) ((buffTimeR * duration) / 100D);
         }
 
-        if (cts == CombatOrders) {
-            chr.setCombatOrders(option.nOption);
-        }
-
         if (TSIndex.isTwoState(cts) && TSIndex.getTSEFromCTS(cts) != null) {
             var twoState = getTSBByTSIndex(TSIndex.getTSEFromCTS(cts));
             if (twoState != null) {
@@ -161,6 +157,9 @@ public class TemporaryStatManager {
             for (Map.Entry<BaseStat, Integer> stats : BaseStat.getFromCTS(chr, cts, option).entrySet()) {
                 addBaseStat(stats.getKey(), stats.getValue());
             }
+        }
+        if (cts == CombatOrders) {
+            updateCombatOrdersValue();
         }
         if (cts != LifeTidal && chr.getJobHandler() instanceof DemonAvenger) {
             ((DemonAvenger) chr.getJobHandler()).sendHpUpdate();
@@ -319,10 +318,56 @@ public class TemporaryStatManager {
 
         var options = getCurrentStats().get(cts);
         if (options != null && options.size() > 0) {
+            if (cts == CombatOrders && options.size() > 1) {
+                Option combined = options.get(0).deepCopy();
+                combined.nOption = getCombatOrdersValue();
+                combined.tOption = options.stream().mapToInt(o -> o.tOption).max().orElse(combined.tOption);
+                combined.rOption = options.stream()
+                        .filter(o -> o.rOption != Char.EQUIPPED_ALL_SKILL_SOURCE)
+                        .findFirst()
+                        .orElse(options.get(0)).rOption;
+                return combined;
+            }
             return options.get(0);
         }
 
         return new Option();
+    }
+
+    private int getCombatOrdersValue() {
+        return getCurrentStats().getOrDefault(CombatOrders, Collections.emptyList())
+                .stream()
+                .mapToInt(o -> o.nOption)
+                .sum();
+    }
+
+    private void updateCombatOrdersValue() {
+        chr.setCombatOrders(getCombatOrdersValue());
+    }
+
+    public boolean removeStatByCTSAndSkill(CharacterTemporaryStat cts, int skillId) {
+        Option option = getOptByCTSAndSkill(cts, skillId);
+        if (option == null) {
+            return false;
+        }
+        if (cts.isIndie()) {
+            removeIndieStat(cts, option);
+            return true;
+        }
+        synchronized (statLock) {
+            List<Option> options = getCurrentStats().get(cts);
+            if (cts == CombatOrders && options != null && options.size() > 1) {
+                getRemovedStats().put(cts, new ArrayList<>(options));
+                options.remove(option);
+                getNewStats().put(cts, new ArrayList<>(options));
+                updateCombatOrdersValue();
+                sendResetStatPacket();
+                sendSetStatPacket();
+                return true;
+            }
+        }
+        removeStat(cts);
+        return true;
     }
 
     public Option getOptionElseNull(CharacterTemporaryStat cts) {
