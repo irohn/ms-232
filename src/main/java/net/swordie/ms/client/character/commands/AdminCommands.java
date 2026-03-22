@@ -864,6 +864,23 @@ public class AdminCommands {
         }
     }
 
+    @Command(names = {"skill"}, requiredType = Tester)
+    public static class GrantSkillAtMaxLevelCommand extends AdminCommand {
+
+        public static void execute(Char chr, String[] args) {
+            if (args.length < 2) {
+                chr.chatMessage("Usage: !skill <id>");
+                return;
+            }
+            int skillId = Integer.parseInt(args[1]);
+            if (!ensureSkillAtMaxLevel(chr, skillId)) {
+                chr.chatMessage(String.format("Could not grant skill %d.", skillId));
+                return;
+            }
+            chr.chatMessage(String.format("Granted skill %d at max level.", skillId));
+        }
+    }
+
     @Command(names = {"packet"}, requiredType = Admin)
     public static class TestPacket extends AdminCommand {
 
